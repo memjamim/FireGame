@@ -77,7 +77,7 @@ void AGameManager::StartPlayerTurn()
 	else if (CityHealth <= 20 && CityHealth > 10) {
 		LastStandBonus = 2;
 	}
-	else if (CityHealth <= 20 && CityHealth > 10) {
+	else if (CityHealth <= 10 && CityHealth > 0) {
 		LastStandBonus = 3;
 	}
 	else {
