@@ -32,15 +32,17 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	// CIty health
+	UPROPERTY(EditAnywhere)
+	uint32 CityHealth;
+
 	// Action Points
 	UPROPERTY(EditAnywhere)
 	uint32 ActionPoints;
 
-	// Action Points
+	// Wind direction
 	UPROPERTY(EditAnywhere)
 	FVector2D wind_direction;
-
-	
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	TBGameState CurrentState;
@@ -51,6 +53,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoFireTurn();
+
+	UFUNCTION(BlueprintCallable, Category = "Turns")
+	void StartPlayerTurn();
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoRandomEvent();

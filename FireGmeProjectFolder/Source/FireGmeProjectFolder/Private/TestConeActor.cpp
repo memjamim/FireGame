@@ -35,7 +35,7 @@ void ATestConeActor::ChangeCone()
 
     FVector Current = GetActorScale3D();
 
-    if (Current.X < 2.5.f)
+    if (Current.X < 2.5f)
     {
         SetActorScale3D(FVector(3, 3, 3));
     }
