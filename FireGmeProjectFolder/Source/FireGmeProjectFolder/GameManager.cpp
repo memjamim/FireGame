@@ -2,6 +2,8 @@
 
 
 #include "GameManager.h"
+#include "TileManager.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AGameManager::AGameManager()
@@ -17,7 +19,17 @@ AGameManager::AGameManager()
 void AGameManager::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (!TileManager)
+	{
+		TArray<AActor*> FoundManagers;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATileManager::StaticClass(), FoundManagers);
+
+		if (FoundManagers.Num() > 0)
+		{
+			TileManager = Cast<ATileManager>(FoundManagers[0]);
+		}
+	}
 }
 
 // Called every frame
@@ -53,8 +65,13 @@ void AGameManager::EndTurn()
 // Handles all fire updates this turn.
 void AGameManager::DoFireTurn()
 {
-	// Should probably talk to/wait for some FireManager class to do this
-	return;
+	if (TileManager)
+	{
+		TileManager->ExecuteFireTurn();
+	}
+
+	// After fire resolves, return to player turn for now
+	CurrentState = TBGameState::PLAYER_TURN;
 }
 
 // Does random events

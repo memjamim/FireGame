@@ -1,12 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "GameManager.generated.h"
 
-// Turn-Based Gameplay State
+// Turn State
 UENUM(BlueprintType)
 enum class TBGameState : uint8 {
 	PLAYER_TURN = 0,
@@ -15,44 +13,40 @@ enum class TBGameState : uint8 {
 	RANDOM_EVENTS = 3
 };
 
+class ATileManager;
+
 UCLASS()
 class FIREGMEPROJECTFOLDER_API AGameManager : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
+
+public:
 	AGameManager();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
+public:
 	virtual void Tick(float DeltaTime) override;
 
-	// Action Points
+	UFUNCTION(BlueprintCallable)
+	void EndTurn();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Managers")
+	ATileManager* TileManager = nullptr;
+
 	UPROPERTY(EditAnywhere)
 	uint32 ActionPoints;
 
-	// Action Points
 	UPROPERTY(EditAnywhere)
 	FVector2D wind_direction;
 
-	
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	TBGameState CurrentState;
-
-	// Function to modify cone
-	UFUNCTION(BlueprintCallable, Category = "Turns")
-	void EndTurn();
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoFireTurn();
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoRandomEvent();
-
 };
