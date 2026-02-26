@@ -4,19 +4,19 @@
 #include "GameManager.h"
 
 /** The maximum city health */
-const uint32 MAX_CITY_HEALTH = 100;
+const int32 MAX_CITY_HEALTH = 100;
 
 /** AP the player starts with */
-const uint32 STARTING_AP = 3;
+const int32 STARTING_AP = 3;
 
 /** The max AP a player can have to earn interest (9 is the max, so they can earn 3 total additional AP) */
-const uint32 INTEREST_CAP = 9;
+const int32 INTEREST_CAP = 9;
 
 /** Interest will be earned at multiples of this number (e.x. Balatro is 5) */
-const uint32 INTEREST_RATE = 3;
+const int32 INTEREST_RATE = 3;
 
 /** How much AP the player will receive at the start of their turn */
-const uint32 AP_PER_ROUND = 1;
+const int32 AP_PER_ROUND = 1;
 
 // Sets default values
 AGameManager::AGameManager()

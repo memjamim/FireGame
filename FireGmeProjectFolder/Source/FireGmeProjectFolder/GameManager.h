@@ -33,12 +33,12 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	// CIty health
-	UPROPERTY(EditAnywhere)
-	uint32 CityHealth;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
+	int32 CityHealth;
 
 	// Action Points
-	UPROPERTY(EditAnywhere)
-	uint32 ActionPoints;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
+	int32 ActionPoints;
 
 	// Wind direction
 	UPROPERTY(EditAnywhere)
