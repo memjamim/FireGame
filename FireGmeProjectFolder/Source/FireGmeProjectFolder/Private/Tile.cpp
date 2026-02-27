@@ -50,8 +50,12 @@ bool ATile::ApplyDataFromRowName(FName RowName)
 
 	TileID = Row->ID;
 	bIsBurnable = Row->Is_Burnable;
+
 	CurrentFireHealth = Row->Tile_Health;
 	CommunityHealthCost = Row->Community_Health_Cost;
+
+
+	GridCoordinates = Row->Coordinates;
 
 	UpdateTileVisuals();
 	return true;
@@ -59,11 +63,9 @@ bool ATile::ApplyDataFromRowName(FName RowName)
 
 bool ATile::ApplyDataFromID(int32 InTileID)
 {
-	if (!TileDataTable)
-	{
-		return false;
-	}
+	if (!TileDataTable) return false;
 
+	// Scan DT rows to find matching ID (later when we build a map this will have to be changed)
 	TArray<FTileDataRow*> AllRows;
 	static const FString Context(TEXT("TileDataLookup"));
 	TileDataTable->GetAllRows(Context, AllRows);
@@ -72,11 +74,11 @@ bool ATile::ApplyDataFromID(int32 InTileID)
 	{
 		if (Row && Row->ID == InTileID)
 		{
+			// RowName is the table key
 			TileID = Row->ID;
 			bIsBurnable = Row->Is_Burnable;
 			CurrentFireHealth = Row->Tile_Health;
 			CommunityHealthCost = Row->Community_Health_Cost;
-
 			UpdateTileVisuals();
 			return true;
 		}

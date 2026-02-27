@@ -210,7 +210,7 @@ void ATileManager::BurnOutTile(ATile* Tile)
 
 	Tile->ApplyDataFromID(CharredTileID);
 
-	UE_LOG(LogTemp, Warning, TEXT("Tile burned out and became charred at (%d, %d, %d)"),
+	UE_LOG(LogTemp, Log, TEXT("Tile burned out and became charred at (%d, %d, %d)"),
 		Tile->GridCoordinates.X,
 		Tile->GridCoordinates.Y,
 		Tile->GridCoordinates.Z);
@@ -225,7 +225,7 @@ void ATileManager::ApplyCommunityDamage(ATile* Tile)
 
 	CommunityHealth = FMath::Clamp(CommunityHealth - Tile->CommunityHealthCost, 0, 100);
 
-	UE_LOG(LogTemp, Warning, TEXT("Community Health reduced by %d. New value: %d"),
+	UE_LOG(LogTemp, Log, TEXT("Community Health reduced by %d. New value: %d"),
 		Tile->CommunityHealthCost,
 		CommunityHealth);
 }

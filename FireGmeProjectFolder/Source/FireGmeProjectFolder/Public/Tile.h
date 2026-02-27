@@ -6,6 +6,7 @@
 #include "Engine/DataTable.h"
 #include "Tile.generated.h"
 
+
 UCLASS()
 class FIREGMEPROJECTFOLDER_API ATile : public AActor
 {
