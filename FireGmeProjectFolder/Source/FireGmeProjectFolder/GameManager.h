@@ -6,7 +6,8 @@
 
 // Turn State
 UENUM(BlueprintType)
-enum class TBGameState : uint8 {
+enum class TBGameState : uint8
+{
 	PLAYER_TURN = 0,
 	UNIT_ACTING = 1,
 	FIRE_TURN = 2,
@@ -26,10 +27,14 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	// Reference to tile manager
+	UPROPERTY()
+	ATileManager* TileManager = nullptr;
+
 public:
 	virtual void Tick(float DeltaTime) override;
 
-	// CIty health
+	// City health
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 CityHealth;
 
@@ -38,11 +43,14 @@ public:
 	int32 ActionPoints;
 
 	// Wind direction
-	UPROPERTY(EditAnywhere)
-	FVector2D wind_direction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
+	FVector2D WindDirection;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	TBGameState CurrentState;
+
+	UFUNCTION(BlueprintCallable, Category = "Turns")
+	void EndTurn();
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoFireTurn();

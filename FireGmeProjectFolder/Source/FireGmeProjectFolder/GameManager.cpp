@@ -59,7 +59,7 @@ void AGameManager::Tick(float DeltaTime)
 // Handles State Transitions and Behavior at the End of a Turn
 void AGameManager::EndTurn()
 {
-	UE_LOG(LogTemp, Log, TEXT("Ending Turn: %d"), CurrentState);
+	UE_LOG(LogTemp, Log, TEXT("Ending Turn: %d"), static_cast<uint8>(CurrentState));
 	switch (CurrentState)
 	{
 	case TBGameState::PLAYER_TURN:
