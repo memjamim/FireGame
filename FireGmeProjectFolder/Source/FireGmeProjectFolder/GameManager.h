@@ -29,15 +29,15 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
-	UFUNCTION(BlueprintCallable)
-	void EndTurn();
+	// CIty health
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
+	int32 CityHealth;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Managers")
-	ATileManager* TileManager = nullptr;
+	// Action Points
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
+	int32 ActionPoints;
 
-	UPROPERTY(EditAnywhere)
-	uint32 ActionPoints;
-
+	// Wind direction
 	UPROPERTY(EditAnywhere)
 	FVector2D wind_direction;
 
@@ -46,6 +46,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoFireTurn();
+
+	UFUNCTION(BlueprintCallable, Category = "Turns")
+	void StartPlayerTurn();
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoRandomEvent();
