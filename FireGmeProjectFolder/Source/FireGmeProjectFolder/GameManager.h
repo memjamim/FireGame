@@ -37,8 +37,8 @@ public:
 	uint32 ActionPoints;
 
 	// Action Points
-	UPROPERTY(EditAnywhere)
-	FVector2D wind_direction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wind")
+	int32 WindDirection;
 
 	
 

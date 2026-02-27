@@ -11,6 +11,7 @@ AGameManager::AGameManager()
 	// TODO: Probably need to decide this value
 	ActionPoints = 100;
 	CurrentState = TBGameState::PLAYER_TURN;
+	WindDirection = rand() % 6;
 }
 
 // Called when the game starts or when spawned
@@ -38,7 +39,7 @@ void AGameManager::EndTurn()
 		DoFireTurn();
 		break;
 	case TBGameState::FIRE_TURN:
-		CurrentState = (rand() % 100) > 90 ? TBGameState::RANDOM_EVENTS : TBGameState::PLAYER_TURN;
+		CurrentState = TBGameState::RANDOM_EVENTS;
 		DoRandomEvent();
 		break;
 	case TBGameState::RANDOM_EVENTS:
@@ -54,13 +55,21 @@ void AGameManager::EndTurn()
 void AGameManager::DoFireTurn()
 {
 	// Should probably talk to/wait for some FireManager class to do this
-	return;
+	EndTurn();
 }
 
 // Does random events
 void AGameManager::DoRandomEvent()
 {
 	// First should probably handle the occassional shift in winds
+	if (rand() % 2 == 0)
+	{
+		uint16 temp = WindDirection;
+		while (WindDirection == temp)
+		{
+			WindDirection = rand() % 6;
+		}
+	}
 	// Then should have a small chance to trigger random events
-	return;
+	EndTurn();
 }
