@@ -38,13 +38,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 CityHealth;
 
-	// Action Points
+  // Wind direction
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wind")
+	int32 WindDirection;
+  
+  // Action Points
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 ActionPoints;
-
-	// Wind direction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
-	FVector2D WindDirection;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	TBGameState CurrentState;
