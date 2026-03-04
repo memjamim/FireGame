@@ -1,233 +1,307 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Unit.h"
 #include "Tile.h"
+#include "TileManager.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AUnit::AUnit()
 {
-    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-    PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = true;
 
-    Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-    RootComponent = Root;
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	RootComponent = Root;
 
-    UnitMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("UnitMesh"));
-    UnitMesh->SetupAttachment(Root);
+	UnitMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("UnitMesh"));
+	UnitMesh->SetupAttachment(Root);
 
-    CurrentStamina = 100;
-    CurrentTile = nullptr;
-    CubeCoordinates = FVector::ZeroVector;
-    bIsSelected = false;
-    bHasActedThisTurn = false;
+	CurrentStamina = 100;
+	CurrentTile = nullptr;
+	TileManager = nullptr;
+	GridCoordinates = FIntVector::ZeroValue;
+	bIsSelected = false;
+	bHasActedThisTurn = false;
 }
 
 // Called when the game starts or when spawned
 void AUnit::BeginPlay()
 {
-    Super::BeginPlay();
+	Super::BeginPlay();
+
+	// Cache the TileManager reference
+	TileManager = FindTileManager();
+
+	if (!TileManager)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s: No ATileManager found in the level."), *GetName());
+		return;
+	}
+
+	// Link to the tile at our GridCoordinates (default 0,0,0)
+	if (!CurrentTile)
+	{
+		if (ATile* const* FoundTile = TileManager->TileLookup.Find(GridCoordinates))
+		{
+			SetCurrentTile(*FoundTile);
+
+			UE_LOG(LogTemp, Warning, TEXT("%s: Spawned on tile at (%d, %d, %d) — TileID: %d"),
+				*GetName(),
+				GridCoordinates.X, GridCoordinates.Y, GridCoordinates.Z,
+				CurrentTile->TileID);
+
+			UE_LOG(LogTemp, Warning, TEXT("  Name: %s | ID: %d | Description: %s"),
+				*UnitData.Name, UnitData.ID, *UnitData.Description);
+
+			UE_LOG(LogTemp, Warning, TEXT("  Stamina: %d (Current: %d) | Movement Type: %d"),
+				UnitData.Stamina, CurrentStamina, UnitData.Unit_Movement_Type);
+
+			UE_LOG(LogTemp, Warning, TEXT("  Action Cost: %d | Turns To Deploy: %d"),
+				UnitData.Action_Cost, UnitData.Turns_To_Deploy);
+
+			UE_LOG(LogTemp, Warning, TEXT("  Coordinates: (%d, %d, %d)"),
+				UnitData.Coordinates.X, UnitData.Coordinates.Y, UnitData.Coordinates.Z);
+
+			UE_LOG(LogTemp, Warning, TEXT("  Model: %s | Material: %s"),
+				UnitData.Model.IsNull() ? TEXT("None") : *UnitData.Model.GetAssetName(),
+				UnitData.Material.IsNull() ? TEXT("None") : *UnitData.Material.GetAssetName());
+
+			UE_LOG(LogTemp, Warning, TEXT("  Unit_BP: %s"),
+				UnitData.Unit_BP ? *UnitData.Unit_BP->GetName() : TEXT("None"));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s: No tile found at (%d, %d, %d)."),
+				*GetName(),
+				GridCoordinates.X, GridCoordinates.Y, GridCoordinates.Z);
+		}
+	}
 }
 
 // Called every frame
 void AUnit::Tick(float DeltaTime)
 {
-    Super::Tick(DeltaTime);
+	Super::Tick(DeltaTime);
 }
 
-void AUnit::InitializeFromDataTable(FName RowName)
+// Data Table Functions
+
+bool AUnit::ApplyDataFromRowName(FName RowName)
 {
-    if (!UnitDataTable)
-    {
-        UE_LOG(LogTemp, Error, TEXT("UnitDataTable is not set for %s"), *GetName());
-        return;
-    }
+	if (!UnitDataTable)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s: UnitDataTable is not set."), *GetName());
+		return false;
+	}
 
-    FUnitData* Row = UnitDataTable->FindRow<FUnitData>(RowName, TEXT(""));
-    if (Row)
-    {
-        UnitData = *Row;
-        CurrentStamina = UnitData.Stamina;
-        CubeCoordinates = UnitData.Coordinates;
+	static const FString Context(TEXT("UnitDataLookup"));
+	const FUnitData* Row = UnitDataTable->FindRow<FUnitData>(RowName, Context);
+	if (!Row)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s: No row named '%s' in UnitDataTable."),
+			*GetName(), *RowName.ToString());
+		return false;
+	}
 
-        // Load and apply mesh if specified
-        if (!UnitData.Model.IsNull())
-        {
-            UStaticMesh* LoadedMesh = UnitData.Model.LoadSynchronous();
-            if (LoadedMesh && UnitMesh)
-            {
-                UnitMesh->SetStaticMesh(LoadedMesh);
-            }
-        }
+	UnitData = *Row;
+	CurrentStamina = UnitData.Stamina;
+	GridCoordinates = UnitData.Coordinates;
 
-        // Load and apply material if specified
-        if (!UnitData.Material.IsNull())
-        {
-            UMaterialInterface* LoadedMaterial = UnitData.Material.LoadSynchronous();
-            if (LoadedMaterial && UnitMesh)
-            {
-                UnitMesh->SetMaterial(0, LoadedMaterial);
-            }
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("Could not find row %s in UnitDataTable"), *RowName.ToString());
-    }
+	// Load and apply mesh if specified
+	if (!UnitData.Model.IsNull())
+	{
+		UStaticMesh* LoadedMesh = UnitData.Model.LoadSynchronous();
+		if (LoadedMesh && UnitMesh)
+		{
+			UnitMesh->SetStaticMesh(LoadedMesh);
+		}
+	}
+
+	// Load and apply material if specified
+	if (!UnitData.Material.IsNull())
+	{
+		UMaterialInterface* LoadedMaterial = UnitData.Material.LoadSynchronous();
+		if (LoadedMaterial && UnitMesh)
+		{
+			UnitMesh->SetMaterial(0, LoadedMaterial);
+		}
+	}
+
+	// Snap to the tile at the row's coordinates
+	if (TileManager)
+	{
+		if (ATile* const* FoundTile = TileManager->TileLookup.Find(GridCoordinates))
+		{
+			SetCurrentTile(*FoundTile);
+		}
+	}
+
+	return true;
 }
 
-bool AUnit::CanMoveToTile(ATile* TargetTile)
-{
-    if (!TargetTile)
-    {
-        return false;
-    }
+// Position Functions
 
-    // Add additional checks here, such as checking if the tile is occupied, if it's within movement range, 
-    // terrain type, etc.
-    return true;
+void AUnit::SetCurrentTile(ATile* NewTile)
+{
+	CurrentTile = NewTile;
+
+	if (CurrentTile)
+	{
+		GridCoordinates = CurrentTile->GridCoordinates;
+		SetActorLocation(CurrentTile->GetActorLocation());
+	}
 }
 
-bool AUnit::MoveToTile(ATile* TargetTile)
+TArray<ATile*> AUnit::GetAdjacentTiles() const
 {
-    if (!CanMoveToTile(TargetTile))
-    {
-        return false;
-    }
+	if (TileManager)
+	{
+		return TileManager->GetNeighborTiles(GridCoordinates);
+	}
 
-    // Update tile reference
-    ATile* PreviousTile = CurrentTile;
-    CurrentTile = TargetTile;
+	return TArray<ATile*>();
+}
 
-    // Move to tile's location
-    SetActorLocation(TargetTile->GetActorLocation());
+// Movement Functions
 
-    // Consume stamina
-    ConsumeStamina(UnitData.Action_Cost);
+bool AUnit::MoveToTile(FIntVector TargetCoordinates)
+{
+	if (!TileManager)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: No TileManager — cannot move."), *GetName());
+		return false;
+	}
 
-    // Trigger completion event (Blueprint can override for animations, etc.)
-    OnMoveComplete();
+	ATile* const* FoundTile = TileManager->TileLookup.Find(TargetCoordinates);
+	if (!FoundTile || !IsValid(*FoundTile))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: No tile at (%d, %d, %d)."),
+			*GetName(),
+			TargetCoordinates.X, TargetCoordinates.Y, TargetCoordinates.Z);
+		return false;
+	}
 
-    return true;
+	ATile* TargetTile = *FoundTile;
+
+	if (!CanMoveToTile(TargetTile))
+	{
+		return false;
+	}
+
+	SetCurrentTile(TargetTile);
+	OnMoveComplete();
+	return true;
+}
+
+bool AUnit::CanMoveToTile_Implementation(ATile* TargetTile)
+{
+	// Base check — override in Blueprint for range, terrain, occupied checks
+	return IsValid(TargetTile);
 }
 
 void AUnit::OnMoveComplete_Implementation()
 {
-    // Default implementation - override in Blueprint for custom behavior
+	// Override in Blueprint for custom behavior
 }
+
+// Selection functions
 
 void AUnit::Select()
 {
-    bIsSelected = true;
-    OnSelected();
+	bIsSelected = true;
+	OnSelected();
 }
 
 void AUnit::Deselect()
 {
-    bIsSelected = false;
-    OnDeselected();
+	bIsSelected = false;
+	OnDeselected();
 }
 
 void AUnit::OnSelected_Implementation()
 {
-    // Default: Visual feedback (override in Blueprint)
-    // Example: Highlight the unit, show movement range
+	// Override in Blueprint — highlight unit, show movement range, etc.
 }
 
 void AUnit::OnDeselected_Implementation()
 {
-    // Default: Remove visual feedback
+	// Override in Blueprint — remove visual feedback
 }
+
+// Turn functions
 
 void AUnit::StartTurn()
 {
-    bHasActedThisTurn = false;
-    RestoreStamina(UnitData.Stamina);
+	bHasActedThisTurn = false;
+	RestoreStamina(UnitData.Stamina);
 }
 
 void AUnit::EndTurn()
 {
-    bHasActedThisTurn = true;
+	bHasActedThisTurn = true;
 }
+
+
+// Ability functions
 
 bool AUnit::CanUseAbility(int32 AbilityIndex)
 {
-    if (bHasActedThisTurn)
-    {
-        return false;
-    }
+	if (bHasActedThisTurn)
+	{
+		return false;
+	}
 
-    // Check stamina, cooldowns, etc. (implement in Blueprint)
-    return true;
+	// Extend in Blueprint per-unit-type
+	return true;
 }
 
 void AUnit::UseAbility_Implementation(int32 AbilityIndex, ATile* TargetTile)
 {
-    // Override in Blueprint for specific abilities
+	// Override in Blueprint — Helicopter, Residential FF, Wildland FF each have unique abilities
 }
 
 TArray<FString> AUnit::GetAvailableAbilities_Implementation()
 {
-    // Default implementation - override in Blueprint for custom behavior
-    return TArray<FString>();
+	return TArray<FString>();
 }
 
-TArray<ATile*> AUnit::GetTilesInRange(int32 Range)
-{
-    TArray<ATile*> TilesInRange;
-
-    // Implementation would query your tile grid manager
-    // Pseudocode:
-    // for each tile in grid:
-    //     if GetCubeDistance(CubeCoordinates, tile.CubeCoordinates) <= Range:
-    //         TilesInRange.Add(tile)
-
-    return TilesInRange;
-}
-
-int32 AUnit::GetCubeDistance(FVector CubeA, FVector CubeB)
-{
-    // Distance in cube coordinates: (|dx| + |dy| + |dz|) / 2
-    FVector Diff = CubeA - CubeB;
-    return (FMath::Abs(Diff.X) + FMath::Abs(Diff.Y) + FMath::Abs(Diff.Z)) / 2;
-}
-
-bool AUnit::IsValidCubeCoordinate(FVector Cube)
-{
-    // In cube coordinates, x + y + z should always equal 0
-    return FMath::IsNearlyZero(Cube.X + Cube.Y + Cube.Z);
-}
-
-TArray<FVector> AUnit::GetNeighbors(FVector CubeCoord)
-{
-    TArray<FVector> Directions = {
-        FVector(-1, 0, 1),   // North
-        FVector(0, -1, 1),   // Northeast
-        FVector(1, -1, 0),   // Southeast
-        FVector(1, 0, -1),   // South
-        FVector(0, 1, -1),   // Southwest
-        FVector(-1, 1, 0)    // Northwest
-    };
-
-    TArray<FVector> Neighbors;
-    for (const FVector& Dir : Directions)
-    {
-        Neighbors.Add(CubeCoord + Dir);
-    }
-
-    return Neighbors;
-}
+// Stamina functions
 
 void AUnit::ConsumeStamina(int32 Amount)
 {
-    CurrentStamina = FMath::Max(CurrentStamina - Amount, 0);
+	CurrentStamina = FMath::Max(CurrentStamina - Amount, 0);
 }
 
 void AUnit::RestoreStamina(int32 Amount)
 {
-    CurrentStamina = FMath::Min(CurrentStamina + Amount, UnitData.Stamina);
+	CurrentStamina = FMath::Min(CurrentStamina + Amount, UnitData.Stamina);
 }
 
 bool AUnit::HasEnoughStamina(int32 Required) const
 {
-    return CurrentStamina >= Required;
+	return CurrentStamina >= Required;
+}
+
+// Helper functions
+
+int32 AUnit::GetCubeDistance(FIntVector CubeA, FIntVector CubeB)
+{
+	FIntVector Diff = CubeA - CubeB;
+	return (FMath::Abs(Diff.X) + FMath::Abs(Diff.Y) + FMath::Abs(Diff.Z)) / 2;
+}
+
+bool AUnit::IsValidCubeCoordinate(FIntVector Cube)
+{
+	return (Cube.X + Cube.Y + Cube.Z) == 0;
+}
+
+ATileManager* AUnit::FindTileManager() const
+{
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATileManager::StaticClass(), Found);
+
+	if (Found.Num() > 0)
+	{
+		return Cast<ATileManager>(Found[0]);
+	}
+
+	return nullptr;
 }

@@ -2,165 +2,136 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/DataTable.h"
+#include "UnitDataRow.h"
 #include "Unit.generated.h"
 
 class ATile;
-
-/*
-* Data structure that matches DT_Unit
-*/
-USTRUCT(BlueprintType)
-struct FUnitData : public FTableRowBase
-{
-    GENERATED_BODY()
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    FString Name;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    int32 ID;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    int32 Unit_Movement_Type;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    int32 Stamina;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    FVector Coordinates;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    FString Description;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    TSoftObjectPtr<UStaticMesh> Model;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    TSoftObjectPtr<UMaterialInterface> Material;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    int32 Action_Cost;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    int32 Turns_To_Deploy;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    TSubclassOf<class AUnit> Unit_BP;
-};
+class ATileManager;
 
 UCLASS()
 class FIREGMEPROJECTFOLDER_API AUnit : public AActor
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    // Sets default values for this actor's properties
-    AUnit();
+	AUnit();
 
 protected:
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
+	virtual void BeginPlay() override;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit")
-    UStaticMeshComponent* UnitMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USceneComponent* Root;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-    USceneComponent* Root;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* UnitMesh;
 
+	/** Cached reference to the TileManager in the world. Resolved in BeginPlay. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|References")
+	ATileManager* TileManager;
 
 public:
-    // Called every frame
-    virtual void Tick(float DeltaTime) override;
+	virtual void Tick(float DeltaTime) override;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    FUnitData UnitData;
+	/** Assign in the editor — points to DT_Unit. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|Data")
+	UDataTable* UnitDataTable = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-    UDataTable* UnitDataTable;
+	/** Runtime copy of the row data for this unit instance. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|Data")
+	FUnitData UnitData;
 
-    // Tile unit is standing on 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit")
-    ATile* CurrentTile;
+	/** Read a row from UnitDataTable and apply its data to this unit. */
+	UFUNCTION(BlueprintCallable, Category = "Unit|Data")
+	bool ApplyDataFromRowName(FName RowName);
 
-    // Current Stamina
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit")
-    int32 CurrentStamina;
+	/** Cube coordinates on the hex grid. Default spawn is (0,0,0). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|Position")
+	FIntVector GridCoordinates = FIntVector::ZeroValue;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit")
-    FVector CubeCoordinates;
+	/** The tile this unit is currently standing on. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|Position")
+	ATile* CurrentTile = nullptr;
 
-    // Selection state
-    UPROPERTY(BlueprintReadWrite, Category = "Unit")
-    bool bIsSelected;
+	/** Set the unit's current tile and update GridCoordinates to match. */
+	UFUNCTION(BlueprintCallable, Category = "Unit|Position")
+	void SetCurrentTile(ATile* NewTile);
 
-    UPROPERTY(BlueprintReadWrite, Category = "Unit")
-    bool bHasActedThisTurn;
+	/** Return the tile the unit is standing on. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Unit|Position")
+	ATile* GetCurrentTile() const { return CurrentTile; }
 
-    // Initialization
-    UFUNCTION(BlueprintCallable, Category = "Unit")
-    void InitializeFromDataTable(FName RowName);
+	/** Get the six neighbors of the unit's current tile via TileManager. */
+	UFUNCTION(BlueprintCallable, Category = "Unit|Position")
+	TArray<ATile*> GetAdjacentTiles() const;
 
-    // Movement
-    UFUNCTION(BlueprintCallable, Category = "Unit")
-    bool CanMoveToTile(ATile* TargetTile);
+	/** Move the unit to a target tile by cube coordinates. */
+	UFUNCTION(BlueprintCallable, Category = "Unit|Movement")
+	bool MoveToTile(FIntVector TargetCoordinates);
 
-    UFUNCTION(BlueprintCallable, Category = "Unit")
-    bool MoveToTile(ATile* TargetTile);
+	/** Override in Blueprint for custom validation (range, obstacles, terrain). */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Movement")
+	bool CanMoveToTile(ATile* TargetTile);
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit")
-    void OnMoveComplete();
+	/** Called after a move completes. Override in Blueprint. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Movement")
+	void OnMoveComplete();
 
-    // Selection interface
-    UFUNCTION(BlueprintCallable, Category = "Unit|Selection")
-    void Select();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|Stamina")
+	int32 CurrentStamina = 100;
 
-    UFUNCTION(BlueprintCallable, Category = "Unit|Selection")
-    void Deselect();
+	UFUNCTION(BlueprintCallable, Category = "Unit|Stamina")
+	void ConsumeStamina(int32 Amount);
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Selection")
-    void OnSelected();
+	UFUNCTION(BlueprintCallable, Category = "Unit|Stamina")
+	void RestoreStamina(int32 Amount);
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Selection")
-    void OnDeselected();
+	UFUNCTION(BlueprintPure, Category = "Unit|Stamina")
+	bool HasEnoughStamina(int32 Required) const;
 
-    // Cube coordinate helper functions
-    UFUNCTION(BlueprintPure, Category = "Unit|Coordinates")
-    static int32 GetCubeDistance(FVector CubeA, FVector CubeB);
+	UPROPERTY(BlueprintReadWrite, Category = "Unit|Selection")
+	bool bIsSelected = false;
 
-    UFUNCTION(BlueprintPure, Category = "Unit|Coordinates")
-    static bool IsValidCubeCoordinate(FVector Cube);
+	UFUNCTION(BlueprintCallable, Category = "Unit|Selection")
+	void Select();
 
-    UFUNCTION(BlueprintPure, Category = "Unit|Coordinates")
-    static TArray<FVector> GetNeighbors(FVector CubeCoord);
+	UFUNCTION(BlueprintCallable, Category = "Unit|Selection")
+	void Deselect();
 
-    UFUNCTION(BlueprintPure, Category = "Unit|Coordinates")
-    TArray<ATile*> GetTilesInRange(int32 Range);
+	/** Override in Blueprint for visual feedback. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Selection")
+	void OnSelected();
 
-    // Ability system hooks (implement in Blueprint)
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
-    void UseAbility(int32 AbilityIndex, ATile* TargetTile);
+	/** Override in Blueprint to remove visual feedback. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Selection")
+	void OnDeselected();
 
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
-    TArray<FString> GetAvailableAbilities();
+	UPROPERTY(BlueprintReadWrite, Category = "Unit|Turn")
+	bool bHasActedThisTurn = false;
 
-    UFUNCTION(BlueprintCallable, Category = "Unit|Abilities")
-    bool CanUseAbility(int32 AbilityIndex);
+	UFUNCTION(BlueprintCallable, Category = "Unit|Turn")
+	void StartTurn();
 
-    // Turn management
-    UFUNCTION(BlueprintCallable, Category = "Unit|Turn")
-    void StartTurn();
+	UFUNCTION(BlueprintCallable, Category = "Unit|Turn")
+	void EndTurn();
 
-    UFUNCTION(BlueprintCallable, Category = "Unit|Turn")
-    void EndTurn();
+	UFUNCTION(BlueprintCallable, Category = "Unit|Abilities")
+	bool CanUseAbility(int32 AbilityIndex);
 
-    // Stamina management
-    UFUNCTION(BlueprintCallable, Category = "Unit")
-    void ConsumeStamina(int32 Amount);
+	/** Override in Blueprint per-unit-type (Helicopter, Residential FF, Wildland FF). */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
+	void UseAbility(int32 AbilityIndex, ATile* TargetTile);
 
-    UFUNCTION(BlueprintCallable, Category = "Unit")
-    void RestoreStamina(int32 Amount);
+	/** Override in Blueprint to list ability names. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
+	TArray<FString> GetAvailableAbilities();
 
-    UFUNCTION(BlueprintPure, Category = "Unit")
-    bool HasEnoughStamina(int32 Required) const;
+	UFUNCTION(BlueprintPure, Category = "Unit|Coordinates")
+	static int32 GetCubeDistance(FIntVector CubeA, FIntVector CubeB);
+
+	UFUNCTION(BlueprintPure, Category = "Unit|Coordinates")
+	static bool IsValidCubeCoordinate(FIntVector Cube);
+
+private:
+	/** Finds the TileManager singleton in the world. */
+	ATileManager* FindTileManager() const;
 };
