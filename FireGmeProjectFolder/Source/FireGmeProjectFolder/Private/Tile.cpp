@@ -10,6 +10,21 @@ ATile::ATile()
 void ATile::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (bAutoSyncGridCoordinates)
+	{
+		SyncGridCoordinatesFromWorld();
+	}
+}
+
+void ATile::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	if (bAutoSyncGridCoordinates)
+	{
+		SyncGridCoordinatesFromWorld();
+	}
 }
 
 // Called every frame
@@ -48,42 +63,99 @@ bool ATile::ApplyDataFromRowName(FName RowName)
 		return false;
 	}
 
+	TileRowName = RowName;
 	TileID = Row->ID;
 	bIsBurnable = Row->Is_Burnable;
-
 	CurrentFireHealth = Row->Tile_Health;
 	CommunityHealthCost = Row->Community_Health_Cost;
 
-
-	GridCoordinates = Row->Coordinates;
-
+	// Does not directly set GridCoordinates from the row anymore.
+	// BP visuals / UpdateDataTable set world location using hex spacing defined in the BP.
 	UpdateTileVisuals();
+
+	if (bAutoSyncGridCoordinates)
+	{
+		SyncGridCoordinatesFromWorld();
+	}
+
 	return true;
 }
 
 bool ATile::ApplyDataFromID(int32 InTileID)
 {
-	if (!TileDataTable) return false;
-
-	// Scan DT rows to find matching ID (later when we build a map this will have to be changed)
-	TArray<FTileDataRow*> AllRows;
-	static const FString Context(TEXT("TileDataLookup"));
-	TileDataTable->GetAllRows(Context, AllRows);
-
-	for (const FTileDataRow* Row : AllRows)
+	if (!TileDataTable)
 	{
+		return false;
+	}
+
+	static const FString Context(TEXT("TileDataLookup"));
+	const TArray<FName> RowNames = TileDataTable->GetRowNames();
+
+	for (const FName& RowName : RowNames)
+	{
+		const FTileDataRow* Row = TileDataTable->FindRow<FTileDataRow>(RowName, Context);
 		if (Row && Row->ID == InTileID)
 		{
-			// RowName is the table key
+			TileRowName = RowName;
 			TileID = Row->ID;
 			bIsBurnable = Row->Is_Burnable;
 			CurrentFireHealth = Row->Tile_Health;
 			CommunityHealthCost = Row->Community_Health_Cost;
+
 			UpdateTileVisuals();
+
+			if (bAutoSyncGridCoordinates)
+			{
+				SyncGridCoordinatesFromWorld();
+			}
+
 			return true;
 		}
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("No row with ID %d found in DT_Tile"), InTileID);
 	return false;
+}
+
+FIntVector ATile::ConvertWorldToGridCoordinates_Implementation(const FVector& WorldLocation) const
+{
+	// Default fallback only. Override this in BP_Tile with real world coordinates. Not overriding in BP_Tile will cause this to break.
+	return FIntVector(
+		FMath::RoundToInt(WorldLocation.X),
+		FMath::RoundToInt(WorldLocation.Y),
+		FMath::RoundToInt(WorldLocation.Z)
+	);
+}
+
+FVector ATile::ConvertGridToWorldCoordinates_Implementation(const FIntVector& InGridCoordinates) const
+{
+	// Default fallback only. Override this in BP_Tile later to reverse conversion (in BP vs in C++).
+	return FVector(
+		static_cast<float>(InGridCoordinates.X),
+		static_cast<float>(InGridCoordinates.Y),
+		static_cast<float>(InGridCoordinates.Z)
+	);
+}
+
+void ATile::SyncGridCoordinatesFromWorld()
+{
+	GridCoordinates = ConvertWorldToGridCoordinates(GetActorLocation());
+
+	UE_LOG(LogTemp, Verbose, TEXT("Synced GridCoordinates to (%d, %d, %d) from world location (%s)"),
+		GridCoordinates.X,
+		GridCoordinates.Y,
+		GridCoordinates.Z,
+		*GetActorLocation().ToString());
+}
+
+void ATile::SyncWorldFromGrid()
+{
+	const FVector NewWorldLocation = ConvertGridToWorldCoordinates(GridCoordinates);
+	SetActorLocation(NewWorldLocation);
+
+	UE_LOG(LogTemp, Verbose, TEXT("Synced world location to (%s) from GridCoordinates (%d, %d, %d)"),
+		*NewWorldLocation.ToString(),
+		GridCoordinates.X,
+		GridCoordinates.Y,
+		GridCoordinates.Z);
 }
