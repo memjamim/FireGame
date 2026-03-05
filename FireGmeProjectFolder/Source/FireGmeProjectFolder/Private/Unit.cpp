@@ -1,6 +1,8 @@
 #include "Unit.h"
 #include "Tile.h"
 #include "TileManager.h"
+#include "GameManager.h"
+#include "GameManager.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values
@@ -17,9 +19,15 @@ AUnit::AUnit()
 	CurrentStamina = 100;
 	CurrentTile = nullptr;
 	TileManager = nullptr;
+	GameManager = nullptr;
+
 	GridCoordinates = FIntVector::ZeroValue;
 	bIsSelected = false;
+
 	bHasActedThisTurn = false;
+	bHasUsedAbilityThisTurn = false;
+	bHasUsedSpecialThisTurn = false;
+	bHasMovedThisTurn = false;
 }
 
 // Called when the game starts or when spawned
@@ -29,6 +37,7 @@ void AUnit::BeginPlay()
 
 	// Cache the TileManager reference
 	TileManager = FindTileManager();
+	GameManager = FindGameManager();
 
 	if (!TileManager)
 	{
@@ -146,7 +155,11 @@ void AUnit::SetCurrentTile(ATile* NewTile)
 	if (CurrentTile)
 	{
 		GridCoordinates = CurrentTile->GridCoordinates;
-		SetActorLocation(CurrentTile->GetActorLocation());
+
+		FVector NewLocation = CurrentTile->GetActorLocation();
+		NewLocation.Z = GetActorLocation().Z;
+
+		SetActorLocation(NewLocation);
 	}
 }
 
@@ -170,6 +183,12 @@ bool AUnit::MoveToTile(FIntVector TargetCoordinates)
 		return false;
 	}
 
+	if (bHasMovedThisTurn)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: Has already moved this turn."), *GetName());
+		return false;
+	}
+
 	ATile* const* FoundTile = TileManager->TileLookup.Find(TargetCoordinates);
 	if (!FoundTile || !IsValid(*FoundTile))
 	{
@@ -187,6 +206,7 @@ bool AUnit::MoveToTile(FIntVector TargetCoordinates)
 	}
 
 	SetCurrentTile(TargetTile);
+	bHasMovedThisTurn = true;
 	OnMoveComplete();
 	return true;
 }
@@ -231,39 +251,99 @@ void AUnit::OnDeselected_Implementation()
 void AUnit::StartTurn()
 {
 	bHasActedThisTurn = false;
-	RestoreStamina(UnitData.Stamina);
+	bHasUsedAbilityThisTurn = false;
+	bHasUsedSpecialThisTurn = false;
+	bHasMovedThisTurn = false;
+	RestoreStamina(20);
 }
 
 void AUnit::EndTurn()
 {
-	bHasActedThisTurn = true;
+	//bHasActedThisTurn = false;
+	//bHasUsedAbilityThisTurn = false;
+	//bHasUsedSpecialThisTurn = false;
+	//bHasMovedThisTurn = false;
+	//RestoreStamina(20);
+
 }
 
 
 // Ability functions
 
-bool AUnit::CanUseAbility(int32 AbilityIndex)
+//bool AUnit::CanUseAbility(int32 AbilityIndex)
+//{
+//	if (bHasActedThisTurn)
+//	{
+//		return false;
+//	}
+//
+//	// Extend in Blueprint per-unit-type
+//	return true;
+//}
+//
+//void AUnit::UseAbility_Implementation(int32 AbilityIndex, ATile* TargetTile)
+//{
+//	// Override in Blueprint — Helicopter, Residential FF, Wildland FF each have unique abilities
+//}
+//
+//TArray<FString> AUnit::GetAvailableAbilities_Implementation()
+//{
+//	return TArray<FString>();
+//}
+
+// Stamina functions
+bool AUnit::CanUseAbility() const
 {
-	if (bHasActedThisTurn)
+	// Abilities are once per turn and free
+	if (bHasUsedAbilityThisTurn || bHasUsedSpecialThisTurn)
 	{
 		return false;
 	}
 
-	// Extend in Blueprint per-unit-type
 	return true;
 }
 
-void AUnit::UseAbility_Implementation(int32 AbilityIndex, ATile* TargetTile)
+void AUnit::ExecuteAbility_Implementation(const TArray<ATile*>& TargetTiles)
 {
-	// Override in Blueprint — Helicopter, Residential FF, Wildland FF each have unique abilities
+	if (!CanUseAbility())
+	{
+		return;
+	}
+
+	// Logic to be implemented in Blueprints
+	// Blueprint has access to this->TileManager and this->CurrentTile
+
+	// Mark ability as used for this turn
+	bHasUsedAbilityThisTurn = true;
 }
 
-TArray<FString> AUnit::GetAvailableAbilities_Implementation()
+bool AUnit::CanUseSpecial(int32 ActionCost) const
 {
-	return TArray<FString>();
+	// Specials are once per turn but cost actions/stamina
+	if (bHasUsedSpecialThisTurn || bHasUsedAbilityThisTurn || !HasEnoughStamina(ActionCost))
+	{
+		return false;
+	}
+
+	return true;
 }
 
-// Stamina functions
+void AUnit::ExecuteSpecial_Implementation(const TArray<ATile*>& TargetTiles, int32 ActionCost)
+{
+	if (!CanUseSpecial(ActionCost))
+	{
+		return;
+	}
+
+	// Logic to be implemented in Blueprints
+	// Blueprint has access to this->TileManager and this->CurrentTile
+
+	// Consume the required action cost
+	ConsumeStamina(ActionCost);
+
+	// Mark special as used for this turn
+	bHasUsedSpecialThisTurn = true;
+}
 
 void AUnit::ConsumeStamina(int32 Amount)
 {
@@ -301,6 +381,19 @@ ATileManager* AUnit::FindTileManager() const
 	if (Found.Num() > 0)
 	{
 		return Cast<ATileManager>(Found[0]);
+	}
+
+	return nullptr;
+}
+
+AGameManager* AUnit::FindGameManager() const
+{
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AGameManager::StaticClass(), Found);
+
+	if (Found.Num() > 0)
+	{
+		return Cast<AGameManager>(Found[0]);
 	}
 
 	return nullptr;

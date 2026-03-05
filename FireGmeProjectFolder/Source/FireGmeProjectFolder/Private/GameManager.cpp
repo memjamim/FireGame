@@ -3,6 +3,7 @@
 
 #include "GameManager.h"
 #include "TileManager.h"
+#include "Unit.h"
 #include "Kismet/GameplayStatics.h"
 
 /** The maximum city health */
@@ -102,6 +103,18 @@ void AGameManager::StartPlayerTurn()
 	int InterestBonus = (EligibleInterestAP / INTEREST_RATE);
 	int AdditionalAP = (AP_PER_ROUND + InterestBonus + LastStandBonus);
 	ActionPoints += AdditionalAP;
+
+	// ----- REFRESH UNITS -----
+	TArray<AActor*> FoundUnits;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundUnits);
+
+	for (AActor* Actor : FoundUnits)
+	{
+		if (AUnit* Unit = Cast<AUnit>(Actor))
+		{
+			Unit->StartTurn();
+		}
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("Player turn started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d). Total AP: %d"), AdditionalAP, AP_PER_ROUND, InterestBonus, LastStandBonus, ActionPoints);
 

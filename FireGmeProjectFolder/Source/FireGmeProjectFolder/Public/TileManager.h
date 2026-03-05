@@ -58,8 +58,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Data")
 	UDataTable* TileDataTable = nullptr;
 
-protected:
+	UFUNCTION(BlueprintCallable, Category = "Grid")
 	TArray<ATile*> GetNeighborTiles(const FIntVector& Center) const;
+
+protected:
 	void ProcessBurningTile(ATile* BurningTile, TSet<ATile*>& OutTilesToIgnite);
 	void BurnOutTile(ATile* Tile);
 	void ApplyCommunityDamage(ATile* Tile);

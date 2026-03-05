@@ -7,6 +7,7 @@
 
 class ATile;
 class ATileManager;
+class AGameManager;
 
 UCLASS()
 class FIREGMEPROJECTFOLDER_API AUnit : public AActor
@@ -28,6 +29,9 @@ protected:
 	/** Cached reference to the TileManager in the world. Resolved in BeginPlay. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|References")
 	ATileManager* TileManager;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|References")
+	AGameManager* GameManager;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -108,22 +112,47 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Unit|Turn")
 	bool bHasActedThisTurn = false;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Unit|Turn")
+	bool bHasUsedAbilityThisTurn = false;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Unit|Turn")
+	bool bHasUsedSpecialThisTurn = false;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Unit|Turn")
+	bool bHasMovedThisTurn = false; 
+
 	UFUNCTION(BlueprintCallable, Category = "Unit|Turn")
 	void StartTurn();
 
 	UFUNCTION(BlueprintCallable, Category = "Unit|Turn")
 	void EndTurn();
 
+	//UFUNCTION(BlueprintCallable, Category = "Unit|Abilities")
+	//bool CanUseAbility(int32 AbilityIndex);
+
+	///** Override in Blueprint per-unit-type (Helicopter, Residential FF, Wildland FF). */
+	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
+	//void UseAbility(int32 AbilityIndex, ATile* TargetTile);
+
+		/** Override in Blueprint to list ability names. */
+	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
+	//TArray<FString> GetAvailableAbilities();
+
+
 	UFUNCTION(BlueprintCallable, Category = "Unit|Abilities")
-	bool CanUseAbility(int32 AbilityIndex);
+	virtual bool CanUseAbility() const;
 
-	/** Override in Blueprint per-unit-type (Helicopter, Residential FF, Wildland FF). */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
-	void UseAbility(int32 AbilityIndex, ATile* TargetTile);
+	UFUNCTION(BlueprintCallable, Category = "Unit|Abilities")
+	virtual bool CanUseSpecial(int32 ActionCost) const;
 
-	/** Override in Blueprint to list ability names. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
-	TArray<FString> GetAvailableAbilities();
+	void ExecuteAbility(const TArray<ATile*>& TargetTiles);
+	virtual void ExecuteAbility_Implementation(const TArray<ATile*>& TargetTiles);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
+	void ExecuteSpecial(const TArray<ATile*>& TargetTiles, int32 ActionCost);
+	virtual void ExecuteSpecial_Implementation(const TArray<ATile*>& TargetTiles, int32 ActionCost);
+
 
 	UFUNCTION(BlueprintPure, Category = "Unit|Coordinates")
 	static int32 GetCubeDistance(FIntVector CubeA, FIntVector CubeB);
@@ -134,4 +163,6 @@ public:
 private:
 	/** Finds the TileManager singleton in the world. */
 	ATileManager* FindTileManager() const;
+
+	AGameManager* FindGameManager() const;
 };
