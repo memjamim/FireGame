@@ -55,6 +55,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Fire")
 	void IgniteTile(ATile* Tile);
 
+	UFUNCTION(BlueprintCallable, Category = "Fire")
+	void BurnOutTile(ATile* Tile);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Data")
 	UDataTable* TileDataTable = nullptr;
 
@@ -63,7 +66,7 @@ public:
 
 protected:
 	void ProcessBurningTile(ATile* BurningTile, TSet<ATile*>& OutTilesToIgnite);
-	void BurnOutTile(ATile* Tile);
+	
 	void ApplyCommunityDamage(ATile* Tile);
 
 	// Routing function for tile-specific spread rules
