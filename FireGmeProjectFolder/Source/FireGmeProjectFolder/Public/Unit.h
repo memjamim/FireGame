@@ -36,6 +36,15 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|Movement")
+	float MoveSpeed = 400.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|Movement")
+	float RotationSpeed = 720.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|Movement")
+	bool bIsTranslatingToTile = false;
+
 	/** Assign in the editor — points to DT_Unit. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|Data")
 	UDataTable* UnitDataTable = nullptr;
@@ -81,7 +90,7 @@ public:
 	void OnMoveComplete();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|Stamina")
-	int32 CurrentStamina = 100;
+	int32 CurrentStamina;
 
 	UFUNCTION(BlueprintCallable, Category = "Unit|Stamina")
 	void ConsumeStamina(int32 Amount);
@@ -165,4 +174,14 @@ private:
 	ATileManager* FindTileManager() const;
 
 	AGameManager* FindGameManager() const;
+
+	
+	ATile* PendingTargetTile = nullptr;
+	FVector TranslationDirectionXY = FVector::ZeroVector;
+	FRotator TranslationTargetRotation = FRotator::ZeroRotator;
+	float TranslationRemainingDistance = 0.0f;
+	float TranslationFixedZ = 0.0f;
+
+	void StartTranslationToTile(ATile* TargetTile);
+	void UpdateTranslation(float DeltaTime);
 };

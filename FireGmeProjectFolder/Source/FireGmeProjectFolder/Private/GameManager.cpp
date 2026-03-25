@@ -120,9 +120,24 @@ void AGameManager::StartPlayerTurn()
 
 }
 
+void AGameManager::EndPlayerTurn() {
+
+	TArray<AActor*> FoundUnits;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundUnits);
+
+	for (AActor* Actor : FoundUnits)
+	{
+		if (AUnit* Unit = Cast<AUnit>(Actor))
+		{
+			Unit->EndTurn();
+		}
+	}
+}
+
 // Handles all fire updates this turn.
 void AGameManager::DoFireTurn()
 {
+	EndPlayerTurn();
 	// Should probably talk to/wait for some FireManager class to do this
 	if (TileManager)
 	{
