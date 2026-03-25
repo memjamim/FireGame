@@ -59,5 +59,9 @@ public:
 	void StartPlayerTurn();
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
+	void EndPlayerTurn();
+
+
+	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoRandomEvent();
 };
