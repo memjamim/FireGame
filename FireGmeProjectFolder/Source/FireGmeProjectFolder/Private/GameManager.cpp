@@ -1,44 +1,46 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "GameManager.h"
 #include "TileManager.h"
 #include "Unit.h"
 #include "Kismet/GameplayStatics.h"
 
 /** The maximum city health */
-const int32 MAX_CITY_HEALTH = 100;
+static const int32 MAX_CITY_HEALTH = 100;
 
 /** AP the player starts with */
-const int32 STARTING_AP = 3;
+static const int32 STARTING_AP = 3;
 
 /** The max AP a player can have to earn interest (9 is the max, so they can earn 3 total additional AP) */
-const int32 INTEREST_CAP = 9;
+static const int32 INTEREST_CAP = 9;
 
 /** Interest will be earned at multiples of this number (e.x. Balatro is 5) */
-const int32 INTEREST_RATE = 3;
+static const int32 INTEREST_RATE = 3;
 
 /** How much AP the player will receive at the start of their turn */
-const int32 AP_PER_ROUND = 1;
+static const int32 AP_PER_ROUND = 1;
 
 // Sets default values
 AGameManager::AGameManager()
 {
 	CityHealth = MAX_CITY_HEALTH;
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+
 	PrimaryActorTick.bCanEverTick = true;
-	// TODO: Probably need to decide this value
+
 	ActionPoints = STARTING_AP;
-	
 	CurrentState = TBGameState::PLAYER_TURN;
+
 	WindDirection = rand() % 6;
+
+	// Turn counter starts at 0 and becomes 1 on the first StartPlayerTurn().
+	CurrentTurn = 0;
 }
 
-// Called when the game starts or when spawned
 void AGameManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Find TileManager if not assigned
 	if (!TileManager)
 	{
 		TArray<AActor*> FoundManagers;
@@ -49,60 +51,136 @@ void AGameManager::BeginPlay()
 			TileManager = Cast<ATileManager>(FoundManagers[0]);
 		}
 	}
+
+	// Optionally start turn 1 immediately (so UI can show "Turn 1" at game start)
+	// If you prefer to only start Turn 1 after the player clicks something, remove this.
+	StartPlayerTurn();
 }
 
-// Called every frame
 void AGameManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
 
+AGameManager* AGameManager::GetGameManager(const UObject* WorldContextObject)
+{
+	if (!WorldContextObject)
+	{
+		return nullptr;
+	}
+
+	UWorld* World = WorldContextObject->GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(World, AGameManager::StaticClass(), Found);
+	return (Found.Num() > 0) ? Cast<AGameManager>(Found[0]) : nullptr;
+}
+
+void AGameManager::SetActionPoints(int32 NewActionPoints)
+{
+	ActionPoints = NewActionPoints;
+	OnActionPointsChanged.Broadcast(ActionPoints);
+}
+
+void AGameManager::AddActionPoints(int32 Delta)
+{
+	ActionPoints += Delta;
+	OnActionPointsChanged.Broadcast(ActionPoints);
+}
+
+bool AGameManager::TrySpendActionPoints(int32 Cost)
+{
+	if (Cost <= 0)
+	{
+		return true;
+	}
+
+	if (ActionPoints < Cost)
+	{
+		return false;
+	}
+
+	ActionPoints -= Cost;
+	OnActionPointsChanged.Broadcast(ActionPoints);
+	return true;
+}
+
+void AGameManager::SetWindDirection(int32 NewWindDirection)
+{
+	// Keep it 0..5
+	WindDirection = ((NewWindDirection % 6) + 6) % 6;
+}
+
+void AGameManager::AdvanceTurnCounter()
+{
+	CurrentTurn += 1;
+	OnTurnStarted.Broadcast(CurrentTurn);
 }
 
 // Handles State Transitions and Behavior at the End of a Turn
 void AGameManager::EndTurn()
 {
 	UE_LOG(LogTemp, Log, TEXT("Ending Turn: %d"), static_cast<uint8>(CurrentState));
+
 	switch (CurrentState)
 	{
 	case TBGameState::PLAYER_TURN:
-		StartPlayerTurn();
+		// End player actions -> proceed to fire turn
 		CurrentState = TBGameState::FIRE_TURN;
 		DoFireTurn();
 		break;
+
 	case TBGameState::FIRE_TURN:
 		CurrentState = TBGameState::RANDOM_EVENTS;
 		DoRandomEvent();
 		break;
+
 	case TBGameState::RANDOM_EVENTS:
+		// Random events done -> next player turn begins
 		CurrentState = TBGameState::PLAYER_TURN;
+		StartPlayerTurn();
 		break;
+
 	case TBGameState::UNIT_ACTING:
 		CurrentState = TBGameState::PLAYER_TURN;
 		break;
-	};
+	}
 }
 
 void AGameManager::StartPlayerTurn()
 {
+	// Advance the turn counter at the start of the player turn.
+	AdvanceTurnCounter();
+
 	int LastStandBonus;
 
-	if (CityHealth <= 30 && CityHealth > 20) {
+	if (CityHealth <= 30 && CityHealth > 20)
+	{
 		LastStandBonus = 1;
 	}
-	else if (CityHealth <= 20 && CityHealth > 10) {
+	else if (CityHealth <= 20 && CityHealth > 10)
+	{
 		LastStandBonus = 2;
 	}
-	else if (CityHealth <= 10 && CityHealth > 0) {
+	else if (CityHealth <= 10 && CityHealth > 0)
+	{
 		LastStandBonus = 3;
 	}
-	else {
+	else
+	{
 		LastStandBonus = 0;
 	}
 
-	int EligibleInterestAP = FMath::Min(ActionPoints, INTEREST_CAP);
-	int InterestBonus = (EligibleInterestAP / INTEREST_RATE);
-	int AdditionalAP = (AP_PER_ROUND + InterestBonus + LastStandBonus);
+	const int EligibleInterestAP = FMath::Min(ActionPoints, INTEREST_CAP);
+	const int InterestBonus = (EligibleInterestAP / INTEREST_RATE);
+	const int AdditionalAP = (AP_PER_ROUND + InterestBonus + LastStandBonus);
+
 	ActionPoints += AdditionalAP;
+	OnActionPointsChanged.Broadcast(ActionPoints);
 
 	// ----- REFRESH UNITS -----
 	TArray<AActor*> FoundUnits;
@@ -116,12 +194,12 @@ void AGameManager::StartPlayerTurn()
 		}
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Player turn started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d). Total AP: %d"), AdditionalAP, AP_PER_ROUND, InterestBonus, LastStandBonus, ActionPoints);
-
+	UE_LOG(LogTemp, Log, TEXT("Player turn %d started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d). Total AP: %d"),
+		CurrentTurn, AdditionalAP, AP_PER_ROUND, InterestBonus, LastStandBonus, ActionPoints);
 }
 
-void AGameManager::EndPlayerTurn() {
-
+void AGameManager::EndPlayerTurn()
+{
 	TArray<AActor*> FoundUnits;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundUnits);
 
@@ -138,28 +216,31 @@ void AGameManager::EndPlayerTurn() {
 void AGameManager::DoFireTurn()
 {
 	EndPlayerTurn();
-	// Should probably talk to/wait for some FireManager class to do this
+
 	if (TileManager)
 	{
 		TileManager->ExecuteFireTurn();
 	}
 
-	// After fire resolves, end turn
+	// After fire resolves, end turn -> random events
 	EndTurn();
 }
 
 // Does random events
 void AGameManager::DoRandomEvent()
 {
-	// First should probably handle the occassional shift in winds
+	// Occasional shift in winds
 	if (rand() % 2 == 0)
 	{
-		uint16 temp = WindDirection;
-		while (WindDirection == temp)
+		const int32 Temp = WindDirection;
+		while (WindDirection == Temp)
 		{
 			WindDirection = rand() % 6;
 		}
 	}
-	// Then should have a small chance to trigger random events
+
+	// Then should have a small chance to trigger random events...
+
+	// Random events done -> next player turn
 	EndTurn();
 }
