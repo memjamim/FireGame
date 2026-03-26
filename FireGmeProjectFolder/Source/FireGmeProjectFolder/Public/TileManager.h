@@ -25,6 +25,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
 	TArray<ATile*> RegisteredTiles;
 
+	UPROPERTY(EditAnywhere, Category = "Tiles")
+	TSubclassOf<ATile> TileClass;
+
 	// Fast lookup by cube coordinate
 	UPROPERTY()
 	TMap<FIntVector, ATile*> TileLookup;
@@ -60,6 +63,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	TArray<ATile*> GetNeighborTiles(const FIntVector& Center) const;
+
 
 protected:
 	void ProcessBurningTile(ATile* BurningTile, TSet<ATile*>& OutTilesToIgnite);

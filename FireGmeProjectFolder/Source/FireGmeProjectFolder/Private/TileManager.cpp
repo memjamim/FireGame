@@ -1,5 +1,6 @@
 #include "TileManager.h"
 #include "Tile.h"
+#include "ProceduralGeneration.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
@@ -13,16 +14,35 @@ void ATileManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	UE_LOG(LogTemp, Error, TEXT("TILE MANAGER BEGIN PLAY RUNNING"));
 	// Auto-register all tiles already placed in the level
-	TArray<AActor*> FoundTiles;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATile::StaticClass(), FoundTiles);
+	// TArray<AActor*> FoundTiles;
+	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATile::StaticClass(), FoundTiles);
 
-	for (AActor* Actor : FoundTiles)
+	//for (AActor* Actor : FoundTiles)
+	//{
+	//	if (ATile* Tile = Cast<ATile>(Actor))
+	//	{
+	//		RegisterTile(Tile);
+	//	}
+	//}
+
+	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, this); // Generates the map procedurally.
+
+	if (RegisteredTiles.Num() > 0)
 	{
-		if (ATile* Tile = Cast<ATile>(Actor))
-		{
-			RegisterTile(Tile);
-		}
+		int32 RandomIndex = FMath::RandRange(0, RegisteredTiles.Num() - 1);
+		/* NOTE FOR KYLE: We eventually want the fire to start not at a random index, but at a random Forest tile.
+		   Furthermore, we want the fire to start somewhat away from Residential tiles (and others of the sorts) so
+		   as to provide the player a fair opportunity to get setup. */
+		ATile* StartTile = RegisteredTiles[RandomIndex]; 
+
+		IgniteTile(StartTile);
+
+		UE_LOG(LogTemp, Warning, TEXT("Initial fire started at (%d, %d, %d)"),
+			StartTile->GridCoordinates.X,
+			StartTile->GridCoordinates.Y,
+			StartTile->GridCoordinates.Z);
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("TileManager initialized with %d tiles."), RegisteredTiles.Num());
@@ -295,7 +315,7 @@ void ATileManager::GetGrassSpreadTargets(ATile* SourceTile, TSet<ATile*>& OutTil
 		}
 
 		// Example rule: grass only spreads to adjacent grass tiles
-		if (Neighbor->TileID == GrassTileID && Neighbor->bIsBurnable && !Neighbor->bIsBurning)
+		if (/*Neighbor->TileID == GrassTileID && */Neighbor->bIsBurnable && !Neighbor->bIsBurning)
 		{
 			OutTilesToIgnite.Add(Neighbor);
 		}

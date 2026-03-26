@@ -4,7 +4,10 @@
 #include "GameFramework/Actor.h"
 #include "TileDataRow.h"
 #include "Engine/DataTable.h"
+#include "Components/StaticMeshComponent.h"
 #include "Tile.generated.h"
+
+class ATileManager;
 
 UCLASS()
 class FIREGMEPROJECTFOLDER_API ATile : public AActor
@@ -39,8 +42,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile")
 	FIntVector GridCoordinates = FIntVector::ZeroValue;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Tile")
+	UStaticMeshComponent* TileMesh;
+
+	UPROPERTY(BlueprintReadOnly)
+	UStaticMesh* CurrentMesh;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tile")
 	bool bHasBeenDestroyedByFire = false;
+
+	// Static mesh
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Data")
 	UDataTable* TileDataTable = nullptr;
@@ -51,6 +62,9 @@ public:
 	// If true (default), keep GridCoordinates synced from actor world location during construction / updates
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Grid")
 	bool bAutoSyncGridCoordinates = true;
+
+	UPROPERTY()
+	ATileManager* TileManager;
 
 	UFUNCTION(BlueprintCallable, Category = "Tile")
 	void Ignite();

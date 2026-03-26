@@ -4,6 +4,7 @@
 #include "GameManager.h"
 #include "TileManager.h"
 #include "Unit.h"
+#include "AudioManager.h"
 #include "Kismet/GameplayStatics.h"
 
 /** The maximum city health */
@@ -62,6 +63,14 @@ void AGameManager::Tick(float DeltaTime)
 void AGameManager::EndTurn()
 {
 	UE_LOG(LogTemp, Log, TEXT("Ending Turn: %d"), static_cast<uint8>(CurrentState));
+
+	// Upon the ending of a turn (i.e., when the End Turn button is clicked), play the End Turn button sound.
+	// This calls the Singleton of rhe Audio Manager in order to call the function found within it.
+	if (AAudioManager* AM = AAudioManager::Get(GetWorld()))
+	{
+		AM->PlayEndTurnButtonSound();
+	}
+
 	switch (CurrentState)
 	{
 	case TBGameState::PLAYER_TURN:
