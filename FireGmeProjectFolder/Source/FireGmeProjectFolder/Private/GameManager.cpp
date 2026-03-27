@@ -129,10 +129,10 @@ void AGameManager::EndTurn()
 
 	// Upon the ending of a turn (i.e., when the End Turn button is clicked), play the End Turn button sound.
 	// This calls the Singleton of rhe Audio Manager in order to call the function found within it.
-	if (AAudioManager* AM = AAudioManager::Get(GetWorld()))
+	/*if (AAudioManager* AM = AAudioManager::Get(GetWorld()))
 	{
 		AM->PlayEndTurnButtonSound();
-	}
+	}*/
 
 	switch (CurrentState)
 	{
