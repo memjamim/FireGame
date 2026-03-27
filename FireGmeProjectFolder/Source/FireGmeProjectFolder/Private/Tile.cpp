@@ -4,6 +4,9 @@
 ATile::ATile()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	TileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TileMesh"));
+	RootComponent = TileMesh;
 }
 
 // Called when the game starts or when spawned
@@ -113,6 +116,11 @@ bool ATile::ApplyDataFromID(int32 InTileID)
 			bIsBurnable = Row->Is_Burnable;
 			CurrentFireHealth = Row->Tile_Health;
 			CommunityHealthCost = Row->Community_Health_Cost;
+			CurrentMesh = Row->Model;
+			if (TileMesh && CurrentMesh)
+			{
+				TileMesh->SetStaticMesh(CurrentMesh);
+			}
 
 			BaseMaterial = Row->Material;
 			PreFireMaterial = Row->PreFireMaterial;
