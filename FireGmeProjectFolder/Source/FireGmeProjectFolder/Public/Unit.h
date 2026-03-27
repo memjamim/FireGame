@@ -89,6 +89,9 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Movement")
 	void OnMoveComplete();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|Stamina")
+	int32 MaximumStamina;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|Stamina")
 	int32 CurrentStamina;
 
@@ -132,6 +135,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Unit|Turn")
 	void StartTurn();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Unit|Turn")
+	void OnStartTurn();
 
 	UFUNCTION(BlueprintCallable, Category = "Unit|Turn")
 	void EndTurn();

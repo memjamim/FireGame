@@ -33,11 +33,13 @@ AUnit::AUnit()
 // Called when the game starts or when spawned
 void AUnit::BeginPlay()
 {
+	
 	Super::BeginPlay();
 
 	// Cache the TileManager reference
 	TileManager = FindTileManager();
 	GameManager = FindGameManager();
+	
 
 	if (!TileManager)
 	{
@@ -83,6 +85,7 @@ void AUnit::BeginPlay()
 				GridCoordinates.X, GridCoordinates.Y, GridCoordinates.Z);
 		}
 	}
+
 }
 
 // Called every frame
@@ -113,6 +116,7 @@ bool AUnit::ApplyDataFromRowName(FName RowName)
 	}
 
 	UnitData = *Row;
+	MaximumStamina = UnitData.Maximum_Stamina;
 	CurrentStamina = UnitData.Maximum_Stamina;
 	GridCoordinates = UnitData.Coordinates;
 
@@ -185,9 +189,9 @@ bool AUnit::MoveToTile(FIntVector TargetCoordinates)
 		return false;
 	}
 
-	if (bHasMovedThisTurn)
+	if (bHasMovedThisTurn || bIsTranslatingToTile)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: Has already moved this turn."), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("%s: Has already moved this turn or is currently moving."), *GetName());
 		return false;
 	}
 
@@ -208,8 +212,6 @@ bool AUnit::MoveToTile(FIntVector TargetCoordinates)
 	}
 
 	StartTranslationToTile(TargetTile);
-	bHasMovedThisTurn = true;
-	
 	return true;
 }
 
@@ -298,6 +300,7 @@ void AUnit::UpdateTranslation(float DeltaTime)
 		TranslationRemainingDistance = 0.0f;
 
 		SetCurrentTile(ReachedTile);
+		bHasMovedThisTurn = true;
 		OnMoveComplete();
 	}
 }
@@ -350,6 +353,8 @@ void AUnit::StartTurn()
 	bHasUsedAbilityThisTurn = false;
 	bHasUsedSpecialThisTurn = false;
 	bHasMovedThisTurn = false;
+
+	OnStartTurn();
 	
 }
 
