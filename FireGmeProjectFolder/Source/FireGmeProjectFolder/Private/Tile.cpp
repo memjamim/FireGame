@@ -72,6 +72,18 @@ bool ATile::ApplyDataFromRowName(FName RowName)
 	CurrentFireHealth = Row->Tile_Health;
 	CommunityHealthCost = Row->Community_Health_Cost;
 
+	BaseMaterial = Row->Material;
+	PreFireMaterial = Row->PreFireMaterial;
+	BurningMaterial = Row->BurningMaterial;
+
+	TileModels = Row->Models;
+
+	// Fallback for if mesh table is empty
+	if (TileModels.Num() == 0 && Row->Model != nullptr)
+	{
+		TileModels.Add(Row->Model);
+	}
+
 	// Does not directly set GridCoordinates from the row anymore.
 	// BP visuals / UpdateDataTable set world location using hex spacing defined in the BP.
 	UpdateTileVisuals();
@@ -108,6 +120,18 @@ bool ATile::ApplyDataFromID(int32 InTileID)
 			if (TileMesh && CurrentMesh)
 			{
 				TileMesh->SetStaticMesh(CurrentMesh);
+			}
+
+			BaseMaterial = Row->Material;
+			PreFireMaterial = Row->PreFireMaterial;
+			BurningMaterial = Row->BurningMaterial;
+
+			TileModels = Row->Models;
+
+			// Fallback
+			if (TileModels.Num() == 0 && Row->Model != nullptr)
+			{
+				TileModels.Add(Row->Model);
 			}
 
 			UpdateTileVisuals();

@@ -33,6 +33,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile")
 	bool bIsBurning = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Fire")
+	bool bWillIgniteNextTurn = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile")
 	int32 CurrentFireHealth = 0;
 
@@ -65,6 +68,19 @@ public:
 
 	UPROPERTY()
 	ATileManager* TileManager;
+
+	// NEW: Data-driven visuals info (BP can read these)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Visual")
+	TArray<TObjectPtr<UStaticMesh>> TileModels;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Visual")
+	TObjectPtr<UMaterialInterface> BaseMaterial = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Visual")
+	TObjectPtr<UMaterialInterface> PreFireMaterial = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Visual")
+	TObjectPtr<UMaterialInterface> BurningMaterial = nullptr;
 
 	UFUNCTION(BlueprintCallable, Category = "Tile")
 	void Ignite();

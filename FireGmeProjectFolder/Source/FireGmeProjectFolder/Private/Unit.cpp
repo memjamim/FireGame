@@ -16,7 +16,7 @@ AUnit::AUnit()
 	UnitMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("UnitMesh"));
 	UnitMesh->SetupAttachment(Root);
 
-	CurrentStamina = 100;
+	CurrentStamina = 0;
 	CurrentTile = nullptr;
 	TileManager = nullptr;
 	GameManager = nullptr;
@@ -89,6 +89,8 @@ void AUnit::BeginPlay()
 void AUnit::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	UpdateTranslation(DeltaTime);
+
 }
 
 // Data Table Functions
@@ -111,7 +113,7 @@ bool AUnit::ApplyDataFromRowName(FName RowName)
 	}
 
 	UnitData = *Row;
-	CurrentStamina = UnitData.Stamina;
+	CurrentStamina = UnitData.Maximum_Stamina;
 	GridCoordinates = UnitData.Coordinates;
 
 	// Load and apply mesh if specified
@@ -205,10 +207,99 @@ bool AUnit::MoveToTile(FIntVector TargetCoordinates)
 		return false;
 	}
 
-	SetCurrentTile(TargetTile);
+	StartTranslationToTile(TargetTile);
 	bHasMovedThisTurn = true;
-	OnMoveComplete();
+	
 	return true;
+}
+
+void AUnit::StartTranslationToTile(ATile* TargetTile)
+{
+	if (!IsValid(TargetTile))
+	{
+		return;
+	}
+
+	if (!IsValid(CurrentTile))
+	{
+		SetCurrentTile(TargetTile);
+		OnMoveComplete();
+		return;
+	}
+
+	const FIntVector CubeDelta = TargetTile->GridCoordinates - CurrentTile->GridCoordinates;
+
+	const FVector CurrentLocation = GetActorLocation();
+	const FVector TargetLocation = TargetTile->GetActorLocation();
+
+	const FVector StartXY(CurrentLocation.X, CurrentLocation.Y, 0.0f);
+	const FVector TargetXY(TargetLocation.X, TargetLocation.Y, 0.0f);
+	const FVector DeltaXY = TargetXY - StartXY;
+
+	if (DeltaXY.IsNearlyZero())
+	{
+		SetCurrentTile(TargetTile);
+		OnMoveComplete();
+		return;
+	}
+
+	TranslationDirectionXY = DeltaXY.GetSafeNormal();
+	TranslationTargetRotation = TranslationDirectionXY.Rotation();
+	TranslationTargetRotation.Pitch = 0.0f;
+	TranslationTargetRotation.Roll = 0.0f;
+
+	TranslationRemainingDistance = DeltaXY.Size();
+	TranslationFixedZ = CurrentLocation.Z;
+
+	PendingTargetTile = TargetTile;
+	bIsTranslatingToTile = true;
+
+	UE_LOG(LogTemp, Verbose, TEXT("%s: Move start CubeDelta=(%d,%d,%d), XYDistance=%.2f"),
+		*GetName(), CubeDelta.X, CubeDelta.Y, CubeDelta.Z, TranslationRemainingDistance);
+}
+
+void AUnit::UpdateTranslation(float DeltaTime)
+{
+	if (!bIsTranslatingToTile)
+	{
+		return;
+	}
+
+	if (!IsValid(PendingTargetTile))
+	{
+		bIsTranslatingToTile = false;
+		TranslationRemainingDistance = 0.0f;
+		return;
+	}
+
+	const FRotator NewRotation = FMath::RInterpConstantTo(
+		GetActorRotation(),
+		TranslationTargetRotation,
+		DeltaTime,
+		RotationSpeed);
+
+	SetActorRotation(NewRotation);
+
+	const float StepDistance = MoveSpeed * DeltaTime;
+	const float MoveDistance = FMath::Min(StepDistance, TranslationRemainingDistance);
+
+	FVector NewLocation = GetActorLocation() + (TranslationDirectionXY * MoveDistance);
+	NewLocation.Z = TranslationFixedZ;
+	SetActorLocation(NewLocation);
+
+	TranslationRemainingDistance -= MoveDistance;
+
+	if (TranslationRemainingDistance <= KINDA_SMALL_NUMBER)
+	{
+		ATile* const ReachedTile = PendingTargetTile;
+
+		bIsTranslatingToTile = false;
+		PendingTargetTile = nullptr;
+		TranslationRemainingDistance = 0.0f;
+
+		SetCurrentTile(ReachedTile);
+		OnMoveComplete();
+	}
 }
 
 bool AUnit::CanMoveToTile_Implementation(ATile* TargetTile)
@@ -250,15 +341,21 @@ void AUnit::OnDeselected_Implementation()
 
 void AUnit::StartTurn()
 {
+	if (!bHasActedThisTurn && !bHasUsedAbilityThisTurn && !bHasUsedSpecialThisTurn && !bHasMovedThisTurn) {
+		int diff = UnitData.Maximum_Stamina - CurrentStamina;
+		RestoreStamina(diff);
+	}
+
 	bHasActedThisTurn = false;
 	bHasUsedAbilityThisTurn = false;
 	bHasUsedSpecialThisTurn = false;
 	bHasMovedThisTurn = false;
-	RestoreStamina(20);
+	
 }
 
 void AUnit::EndTurn()
 {
+	
 	//bHasActedThisTurn = false;
 	//bHasUsedAbilityThisTurn = false;
 	//bHasUsedSpecialThisTurn = false;
@@ -352,7 +449,7 @@ void AUnit::ConsumeStamina(int32 Amount)
 
 void AUnit::RestoreStamina(int32 Amount)
 {
-	CurrentStamina = FMath::Min(CurrentStamina + Amount, UnitData.Stamina);
+	CurrentStamina = FMath::Min(CurrentStamina + Amount, UnitData.Maximum_Stamina);
 }
 
 bool AUnit::HasEnoughStamina(int32 Required) const

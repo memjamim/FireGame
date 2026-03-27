@@ -25,7 +25,10 @@ struct FIREGMEPROJECTFOLDER_API FUnitData : public FTableRowBase
 	int32 Unit_Movement_Type = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
-	int32 Stamina = 100;
+	int32 Stamina;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
+	int32 Maximum_Stamina;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
 	FIntVector Coordinates = FIntVector::ZeroValue;
