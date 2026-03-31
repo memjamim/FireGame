@@ -6,6 +6,9 @@
 #include "AudioManager.h"
 #include "Kismet/GameplayStatics.h"
 
+// IMPORTANT: include your unit row struct
+#include "UnitDataRow.h"
+
 /** The maximum city health */
 static const int32 MAX_CITY_HEALTH = 100;
 
@@ -54,7 +57,6 @@ void AGameManager::BeginPlay()
 	}
 
 	// Optionally start turn 1 immediately (so UI can show "Turn 1" at game start)
-	// If you prefer to only start Turn 1 after the player clicks something, remove this.
 	StartPlayerTurn();
 }
 
@@ -127,17 +129,9 @@ void AGameManager::EndTurn()
 {
 	UE_LOG(LogTemp, Log, TEXT("Ending Turn: %d"), static_cast<uint8>(CurrentState));
 
-	// Upon the ending of a turn (i.e., when the End Turn button is clicked), play the End Turn button sound.
-	// This calls the Singleton of rhe Audio Manager in order to call the function found within it.
-	/*if (AAudioManager* AM = AAudioManager::Get(GetWorld()))
-	{
-		AM->PlayEndTurnButtonSound();
-	}*/
-
 	switch (CurrentState)
 	{
 	case TBGameState::PLAYER_TURN:
-		// End player actions -> proceed to fire turn
 		CurrentState = TBGameState::FIRE_TURN;
 		DoFireTurn();
 		break;
@@ -148,7 +142,6 @@ void AGameManager::EndTurn()
 		break;
 
 	case TBGameState::RANDOM_EVENTS:
-		// Random events done -> next player turn begins
 		CurrentState = TBGameState::PLAYER_TURN;
 		StartPlayerTurn();
 		break;
@@ -202,6 +195,9 @@ void AGameManager::StartPlayerTurn()
 		}
 	}
 
+	// ----- PROCESS DEPLOYMENT QUEUE (NEW) -----
+	ProcessDeploymentQueue();
+
 	UE_LOG(LogTemp, Log, TEXT("Player turn %d started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d). Total AP: %d"),
 		CurrentTurn, AdditionalAP, AP_PER_ROUND, InterestBonus, LastStandBonus, ActionPoints);
 }
@@ -247,8 +243,136 @@ void AGameManager::DoRandomEvent()
 		}
 	}
 
-	// Then should have a small chance to trigger random events...
-
 	// Random events done -> next player turn
 	EndTurn();
+}
+
+// =========================================================
+//                 DEPLOYMENT QUEUE (NEW)
+// =========================================================
+
+bool AGameManager::PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoords)
+{
+	if (!UnitDataTable)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PurchaseAndQueueUnit: UnitDataTable is null on GameManager."));
+		return false;
+	}
+
+	static const FString Context(TEXT("PurchaseAndQueueUnit"));
+	const FUnitData* Row = UnitDataTable->FindRow<FUnitData>(UnitRowName, Context);
+	if (!Row)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PurchaseAndQueueUnit: No row named '%s' in UnitDataTable."), *UnitRowName.ToString());
+		return false;
+	}
+
+	// Spend AP immediately using your existing logic :contentReference[oaicite:7]{index=7}
+	if (!TrySpendActionPoints(Row->Action_Cost))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PurchaseAndQueueUnit: Not enough AP. Cost=%d AP=%d"), Row->Action_Cost, ActionPoints);
+		return false;
+	}
+
+	FPendingUnitDeployment Deployment;
+	Deployment.UnitRowName = UnitRowName;
+	Deployment.SpawnCoords = SpawnCoords;
+	Deployment.TurnsRemaining = Row->Turns_To_Deploy;
+	Deployment.TurnQueued = CurrentTurn;
+
+	PendingDeployments.Add(Deployment);
+
+	OnDeploymentQueueChanged.Broadcast();
+	OnUnitQueued_BP(Deployment);
+
+	UE_LOG(LogTemp, Log, TEXT("Queued unit '%s' at (%d,%d,%d) with TurnsRemaining=%d"),
+		*UnitRowName.ToString(), SpawnCoords.X, SpawnCoords.Y, SpawnCoords.Z, Deployment.TurnsRemaining);
+
+	return true;
+}
+
+void AGameManager::ClearDeploymentQueue()
+{
+	PendingDeployments.Empty();
+	OnDeploymentQueueChanged.Broadcast();
+}
+
+void AGameManager::ProcessDeploymentQueue()
+{
+	// iterate backwards so RemoveAt is safe
+	for (int32 i = PendingDeployments.Num() - 1; i >= 0; --i)
+	{
+		FPendingUnitDeployment& Entry = PendingDeployments[i];
+		Entry.TurnsRemaining -= 1;
+
+		if (Entry.TurnsRemaining <= 0)
+		{
+			AUnit* NewUnit = DeployUnitNow(Entry);
+
+			// Remove entry regardless (you can change this if you want retries)
+			PendingDeployments.RemoveAt(i);
+
+			OnDeploymentQueueChanged.Broadcast();
+
+			if (NewUnit)
+			{
+				OnUnitDeployed_BP(NewUnit, Entry.UnitRowName, Entry.SpawnCoords);
+			}
+		}
+	}
+
+	// If nothing deployed, we still changed “TurnsRemaining”, so UI may want refresh:
+	if (PendingDeployments.Num() > 0)
+	{
+		OnDeploymentQueueChanged.Broadcast();
+	}
+}
+
+AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
+{
+	if (!UnitDataTable)
+	{
+		return nullptr;
+	}
+
+	static const FString Context(TEXT("DeployUnitNow"));
+	const FUnitData* Row = UnitDataTable->FindRow<FUnitData>(Deployment.UnitRowName, Context);
+	if (!Row || !Row->Unit_BP)
+	{
+		UE_LOG(LogTemp, Error, TEXT("DeployUnitNow: Missing row or Unit_BP for '%s'"), *Deployment.UnitRowName.ToString());
+		return nullptr;
+	}
+
+	// Spawn somewhere safe first; we’ll snap to tile after ApplyDataFromRowName
+	const FVector TempLocation(0.f, 0.f, 200.f);
+	const FTransform SpawnTM(FRotator::ZeroRotator, TempLocation);
+
+	AUnit* NewUnit = GetWorld()->SpawnActor<AUnit>(Row->Unit_BP, SpawnTM);
+	if (!NewUnit)
+	{
+		return nullptr;
+	}
+
+	// Apply the DT row to configure mesh/material/stats/etc. :contentReference[oaicite:8]{index=8}
+	NewUnit->ApplyDataFromRowName(Deployment.UnitRowName);
+
+	// Snap to requested hex tile (this also updates GridCoordinates inside SetCurrentTile) :contentReference[oaicite:9]{index=9}
+	if (TileManager)
+	{
+		if (ATile* const* FoundTile = TileManager->TileLookup.Find(Deployment.SpawnCoords))
+		{
+			NewUnit->SetCurrentTile(*FoundTile);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("DeployUnitNow: No tile at (%d,%d,%d). Leaving unit at temp location."),
+				Deployment.SpawnCoords.X, Deployment.SpawnCoords.Y, Deployment.SpawnCoords.Z);
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Deployed unit '%s' at (%d,%d,%d)"),
+		*Deployment.UnitRowName.ToString(),
+		Deployment.SpawnCoords.X, Deployment.SpawnCoords.Y, Deployment.SpawnCoords.Z);
+
+	return NewUnit;
 }
