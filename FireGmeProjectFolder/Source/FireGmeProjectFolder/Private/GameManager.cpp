@@ -247,9 +247,7 @@ void AGameManager::DoRandomEvent()
 	EndTurn();
 }
 
-// =========================================================
-//                 DEPLOYMENT QUEUE (NEW)
-// =========================================================
+// DEPLOYMENT QUEUE
 
 bool AGameManager::PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoords)
 {
@@ -267,7 +265,7 @@ bool AGameManager::PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoord
 		return false;
 	}
 
-	// Spend AP immediately using your existing logic :contentReference[oaicite:7]{index=7}
+	// Spend AP immediately using your existing logic
 	if (!TrySpendActionPoints(Row->Action_Cost))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("PurchaseAndQueueUnit: Not enough AP. Cost=%d AP=%d"), Row->Action_Cost, ActionPoints);
@@ -353,10 +351,10 @@ AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
 		return nullptr;
 	}
 
-	// Apply the DT row to configure mesh/material/stats/etc. :contentReference[oaicite:8]{index=8}
+	// Apply the DT row
 	NewUnit->ApplyDataFromRowName(Deployment.UnitRowName);
 
-	// Snap to requested hex tile (this also updates GridCoordinates inside SetCurrentTile) :contentReference[oaicite:9]{index=9}
+	// Snap to requested hex tile (this also updates GridCoordinates inside SetCurrentTile)
 	if (TileManager)
 	{
 		if (ATile* const* FoundTile = TileManager->TileLookup.Find(Deployment.SpawnCoords))

@@ -18,15 +18,15 @@ enum class TBGameState : uint8
 	RANDOM_EVENTS = 3
 };
 
-// Existing delegates you’re already broadcasting in .cpp :contentReference[oaicite:3]{index=3}
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionPointsChanged, int32, NewActionPoints);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnStarted, int32, NewTurnNumber);
 
-// Queue delegates (optional but useful for UI refresh)
+// Queue delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeploymentQueueChanged);
 
 /**
- * A single pending deployment entry (Blueprint-visible so UI can show turns remaining)
+ * A single pending deployment entry
  */
 USTRUCT(BlueprintType)
 struct FIREGMEPROJECTFOLDER_API FPendingUnitDeployment
@@ -67,7 +67,7 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
-	// ---- Singleton-ish helper (you already have this in cpp) :contentReference[oaicite:4]{index=4}
+	// ---- Singleton helper
 	UFUNCTION(BlueprintCallable, Category = "GameManager", meta = (WorldContext = "WorldContextObject"))
 	static AGameManager* GetGameManager(const UObject* WorldContextObject);
 
@@ -84,7 +84,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	TBGameState CurrentState;
 
-	// Turn counter (your cpp uses CurrentTurn already) :contentReference[oaicite:5]{index=5}
+	// Turn counter
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 CurrentTurn;
 
@@ -103,7 +103,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnDeploymentQueueChanged OnDeploymentQueueChanged;
 
-	// ---- AP helpers (you already have these in cpp) :contentReference[oaicite:6]{index=6}
+	// ---- AP helpers
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void SetActionPoints(int32 NewActionPoints);
 
