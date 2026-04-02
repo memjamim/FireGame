@@ -136,6 +136,7 @@ void AGameManager::EndTurn()
 	switch (CurrentState)
 	{
 	case TBGameState::PLAYER_TURN:
+		// End player actions -> proceed to fire turn
 		CurrentState = TBGameState::FIRE_TURN;
 		DoFireTurn();
 		break;
@@ -146,6 +147,7 @@ void AGameManager::EndTurn()
 		break;
 
 	case TBGameState::RANDOM_EVENTS:
+		// Random events done -> next player turn begins
 		CurrentState = TBGameState::PLAYER_TURN;
 		StartPlayerTurn();
 		break;
@@ -187,7 +189,7 @@ void AGameManager::StartPlayerTurn()
 	ActionPoints += AdditionalAP;
 	OnActionPointsChanged.Broadcast(ActionPoints);
 
-	// ----- REFRESH UNITS -----
+	// REFRESH UNITS
 	TArray<AActor*> FoundUnits;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundUnits);
 
@@ -199,7 +201,7 @@ void AGameManager::StartPlayerTurn()
 		}
 	}
 
-	// ----- PROCESS DEPLOYMENT QUEUE (NEW) -----
+	// PROCESS DEPLOYMENT QUEUE
 	ProcessDeploymentQueue();
 
 	UE_LOG(LogTemp, Log, TEXT("Player turn %d started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d). Total AP: %d"),
