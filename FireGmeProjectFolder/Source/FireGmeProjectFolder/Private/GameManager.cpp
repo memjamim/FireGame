@@ -5,8 +5,6 @@
 #include "Unit.h"
 #include "AudioManager.h"
 #include "Kismet/GameplayStatics.h"
-
-// IMPORTANT: include your unit row struct
 #include "UnitDataRow.h"
 
 /** The maximum city health */
@@ -129,6 +127,12 @@ void AGameManager::EndTurn()
 {
 	UE_LOG(LogTemp, Log, TEXT("Ending Turn: %d"), static_cast<uint8>(CurrentState));
 
+	// Upon the ending of a turn (i.e., when the End Turn button is clicked), play the End Turn button sound.
+	// This calls the Singleton of rhe Audio Manager in order to call the function found within it.
+	/*if (AAudioManager* AM = AAudioManager::Get(GetWorld()))
+	{
+		AM->PlayEndTurnButtonSound();
+	}*/
 	switch (CurrentState)
 	{
 	case TBGameState::PLAYER_TURN:
@@ -265,7 +269,7 @@ bool AGameManager::PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoord
 		return false;
 	}
 
-	// Spend AP immediately using your existing logic
+	// Spend AP immediately
 	if (!TrySpendActionPoints(Row->Action_Cost))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("PurchaseAndQueueUnit: Not enough AP. Cost=%d AP=%d"), Row->Action_Cost, ActionPoints);
@@ -307,7 +311,7 @@ void AGameManager::ProcessDeploymentQueue()
 		{
 			AUnit* NewUnit = DeployUnitNow(Entry);
 
-			// Remove entry regardless (you can change this if you want retries)
+			// Remove entry regardless
 			PendingDeployments.RemoveAt(i);
 
 			OnDeploymentQueueChanged.Broadcast();
@@ -319,7 +323,7 @@ void AGameManager::ProcessDeploymentQueue()
 		}
 	}
 
-	// If nothing deployed, we still changed “TurnsRemaining”, so UI may want refresh:
+	// If nothing deployed, we still changed TurnsRemaining, so UI will want refresh:
 	if (PendingDeployments.Num() > 0)
 	{
 		OnDeploymentQueueChanged.Broadcast();
@@ -341,7 +345,6 @@ AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
 		return nullptr;
 	}
 
-	// Spawn somewhere safe first; we’ll snap to tile after ApplyDataFromRowName
 	const FVector TempLocation(0.f, 0.f, 200.f);
 	const FTransform SpawnTM(FRotator::ZeroRotator, TempLocation);
 

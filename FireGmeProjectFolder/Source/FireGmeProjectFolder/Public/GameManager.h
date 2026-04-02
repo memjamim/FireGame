@@ -36,7 +36,7 @@ struct FIREGMEPROJECTFOLDER_API FPendingUnitDeployment
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deployment")
 	FName UnitRowName = NAME_None;
 
-	// Where the unit should deploy (your hex cube coords)
+	// Where the unit should deploy (hex cube coords)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deployment")
 	FIntVector SpawnCoords = FIntVector::ZeroValue;
 
@@ -67,11 +67,9 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
-	// ---- Singleton helper
 	UFUNCTION(BlueprintCallable, Category = "GameManager", meta = (WorldContext = "WorldContextObject"))
 	static AGameManager* GetGameManager(const UObject* WorldContextObject);
 
-	// ---- Core game variables
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 CityHealth;
 
@@ -88,12 +86,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 CurrentTurn;
 
-	// ---- Data
-	// Set this on your BP_GameManager / MyGameManager instance in the editor
+	// Set this in BP_GameManager / MyGameManager instance
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Units")
 	UDataTable* UnitDataTable = nullptr;
 
-	// ---- Events
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnActionPointsChanged OnActionPointsChanged;
 
@@ -103,7 +99,6 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnDeploymentQueueChanged OnDeploymentQueueChanged;
 
-	// ---- AP helpers
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void SetActionPoints(int32 NewActionPoints);
 
@@ -135,27 +130,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoRandomEvent();
 
-	// =========================================================
-	//                 DEPLOYMENT QUEUE (NEW)
-	// =========================================================
+	// Deplyment Queue
 
-	// Blueprint-readable so your UI can show “arrives in X turns”
+	// Blueprint-readable so UI can show arrives in X turns
 	UPROPERTY(BlueprintReadOnly, Category = "Deployments")
 	TArray<FPendingUnitDeployment> PendingDeployments;
 
 	/**
 	 * UI calls this instead of spawning immediately.
-	 * - Spends AP immediately (Action_Cost)
-	 * - Adds a pending deployment with Turns_To_Deploy
+	 * Spends AP immediately (Action_Cost)
+	 * Adds a pending deployment with Turns_To_Deploy
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Deployments")
 	bool PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoords);
 
-	/** Optional: allow UI to clear queue (debug) */
+	/** Allow UI to clear queue (debug) */
 	UFUNCTION(BlueprintCallable, Category = "Deployments")
 	void ClearDeploymentQueue();
 
-	/** Optional: helper for UI */
+	/** Helper for UI */
 	UFUNCTION(BlueprintCallable, Category = "Deployments")
 	const TArray<FPendingUnitDeployment>& GetPendingDeployments() const { return PendingDeployments; }
 
@@ -163,21 +156,21 @@ protected:
 	// Tick down queue and deploy ready units at start of player turn
 	void ProcessDeploymentQueue();
 
-	// Spawn + initialize a unit
+	// Spawn & initialize a unit
 	AUnit* DeployUnitNow(const FPendingUnitDeployment& Deployment);
 
 	/**
 	 * Blueprint hook called when a unit is queued
-	 * (great place to refresh shop UI, play SFX, etc.)
+	 * (Place to refresh shop UI, play SFX...)
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Deployments")
 	void OnUnitQueued_BP(const FPendingUnitDeployment& Deployment);
 
 	/**
-	 * Blueprint hook called after a unit is deployed (spawned + applied row + snapped to tile).
+	 * Blueprint hook called after a unit is deployed (spawned, applied row, snapped to tile).
 	 * This is where you can:
-	 * - Get PlayerController 0 -> Cast BP_CameraController -> Add to SpawnedUnits array
-	 * - Print confirmation strings
+	 * Get PlayerController 0 -> Cast BP_CameraController -> Add to SpawnedUnits array
+	 * Print confirmation strings
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Deployments")
 	void OnUnitDeployed_BP(AUnit* NewUnit, FName UnitRowName, FIntVector SpawnCoords);
