@@ -452,10 +452,25 @@ void ATileManager::GetGrassSpreadTargets(ATile* SourceTile, TSet<ATile*>& OutTil
 			continue;
 		}
 
-		// Example rule: grass only spreads to adjacent grass tiles
-		if (/*Neighbor->TileID == GrassTileID && */Neighbor->bIsBurnable && !Neighbor->bIsBurning)
+		// Grass spreads more quickly to adjacent grass tiles, but not instantly
+		if (Neighbor->TileID == GrassTileID && Neighbor->bIsBurnable && !Neighbor->bIsBurning)
 		{
-			OutTilesToIgnite.Add(Neighbor);
+			const int32 Roll = FMath::RandRange(1, 6);
+			if (Roll <= 4)
+			{
+				OutTilesToIgnite.Add(Neighbor);
+			}
+
+		}
+		// Other tilse still have a chance to be spread to but it's unlikely
+		if (Neighbor->TileID != GrassTileID && Neighbor->bIsBurnable && !Neighbor->bIsBurning)
+		{
+			const int32 Roll = FMath::RandRange(1, 6);
+			if (Roll <= 1)
+			{
+				OutTilesToIgnite.Add(Neighbor);
+			}
+
 		}
 	}
 }
