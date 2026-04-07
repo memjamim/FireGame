@@ -5,6 +5,8 @@
 #include "TileManager.h"
 #include "Unit.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 
 namespace
 {
@@ -31,6 +33,7 @@ void AAlertManager::BeginPlay()
 void AAlertManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	HandleAlertClickFromCursor();
 }
 
 bool AAlertManager::CacheManagerReferences()
@@ -110,6 +113,12 @@ bool AAlertManager::TrySpawnRandomAlert()
 				continue;
 			}
 
+			// Avoid selecting a tile that already has an active alert.
+			if (TileCoordsToAlertId.Contains(Tile->GridCoordinates))
+			{
+				continue;
+			}
+
 			if (IsTileAllowedForAlert(Tile, *Data))
 			{
 				ValidTiles.Add(Tile);
@@ -169,6 +178,7 @@ bool AAlertManager::TrySpawnRandomAlert()
 	NewInstance.bResolved = false;
 
 	ActiveAlerts.Add(NewInstance);
+	RegisterAlertTileLink(NewInstance.InstanceId, NewInstance.TileCoords);
 
 	OnAlertSpawned.Broadcast(NewInstance.InstanceId);
 	OnAlertSpawned_BP(NewInstance, *ChosenCandidate->Data);
@@ -182,14 +192,51 @@ bool AAlertManager::TrySpawnRandomAlert()
 	return true;
 }
 
-bool AAlertManager::ResolveAlertOption(int32 AlertInstanceId, int32 OptionIndex)
+bool AAlertManager::EvaluateOptionRequirements(const FActiveAlertInstance& Instance, const FAlertOptionData& OptionData, FText& OutFailureReason) const
 {
-	if (!CacheManagerReferences())
+	if (!GameManager)
 	{
+		OutFailureReason = FText::FromString(TEXT("Game manager not available."));
 		return false;
 	}
 
-	if (!AlertDataTable)
+	if (OptionData.ActionPointCost > GameManager->ActionPoints)
+	{
+		OutFailureReason = FText::FromString(TEXT("Not enough Action Points."));
+		return false;
+	}
+
+	if (GameManager->CityHealth < OptionData.MinimumCityHealth || GameManager->CityHealth > OptionData.MaximumCityHealth)
+	{
+		OutFailureReason = FText::FromString(TEXT("City health requirement not met."));
+		return false;
+	}
+
+	if (GameManager->CurrentTurn < OptionData.MinimumTurn || GameManager->CurrentTurn > OptionData.MaximumTurn)
+	{
+		OutFailureReason = FText::FromString(TEXT("Turn requirement not met."));
+		return false;
+	}
+
+	if (OptionData.RequiredWindDirection >= 0 && GameManager->WindDirection != OptionData.RequiredWindDirection)
+	{
+		OutFailureReason = FText::FromString(TEXT("Wind direction requirement not met."));
+		return false;
+	}
+
+	if (!DoesUnitRequirementPass(Instance.TileCoords, OptionData.UnitRequirement))
+	{
+		OutFailureReason = FText::FromString(TEXT("Required unit is not in range."));
+		return false;
+	}
+
+	OutFailureReason = FText::GetEmpty();
+	return true;
+}
+
+bool AAlertManager::ResolveAlertOption(int32 AlertInstanceId, int32 OptionIndex)
+{
+	if (!CacheManagerReferences() || !AlertDataTable)
 	{
 		return false;
 	}
@@ -208,19 +255,15 @@ bool AAlertManager::ResolveAlertOption(int32 AlertInstanceId, int32 OptionIndex)
 
 	static const FString Context(TEXT("ResolveAlertOption"));
 	const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context);
-	if (!Data)
-	{
-		return false;
-	}
-
-	if (!Data->Options.IsValidIndex(OptionIndex))
+	if (!Data || !Data->Options.IsValidIndex(OptionIndex))
 	{
 		return false;
 	}
 
 	const FAlertOptionData& OptionData = Data->Options[OptionIndex];
 
-	if (!DoesUnitRequirementPass(Instance.TileCoords, OptionData.UnitRequirement))
+	FText FailureReason;
+	if (!EvaluateOptionRequirements(Instance, OptionData, FailureReason))
 	{
 		return false;
 	}
@@ -246,9 +289,53 @@ bool AAlertManager::ResolveAlertOption(int32 AlertInstanceId, int32 OptionIndex)
 	return true;
 }
 
-void AAlertManager::ProcessTurnStart()
+bool AAlertManager::CanResolveAlertOption(int32 AlertInstanceId, int32 OptionIndex, FText& OutFailureReason) const
 {
 	if (!AlertDataTable)
+	{
+		OutFailureReason = FText::FromString(TEXT("Alert data table is missing."));
+		return false;
+	}
+
+	const int32 Index = FindActiveAlertIndexById(AlertInstanceId);
+	if (Index == INDEX_NONE)
+	{
+		OutFailureReason = FText::FromString(TEXT("Alert not found."));
+		return false;
+	}
+
+	const FActiveAlertInstance& Instance = ActiveAlerts[Index];
+	if (Instance.bResolved)
+	{
+		OutFailureReason = FText::FromString(TEXT("Alert is already resolved."));
+		return false;
+	}
+
+	static const FString Context(TEXT("CanResolveAlertOption"));
+	const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context);
+	if (!Data || !Data->Options.IsValidIndex(OptionIndex))
+	{
+		OutFailureReason = FText::FromString(TEXT("Invalid option."));
+		return false;
+	}
+
+	const FAlertOptionData& OptionData = Data->Options[OptionIndex];
+	if (!EvaluateOptionRequirements(Instance, OptionData, OutFailureReason))
+	{
+		if (!OptionData.UnavailableReasonOverride.IsEmpty())
+		{
+			OutFailureReason = OptionData.UnavailableReasonOverride;
+		}
+		return false;
+	}
+
+	OutFailureReason = FText::GetEmpty();
+	return true;
+}
+
+void AAlertManager::ProcessTurnStart()
+{
+	if (!CacheManagerReferences() || !AlertDataTable)
 	{
 		return;
 	}
@@ -264,25 +351,28 @@ void AAlertManager::ProcessTurnStart()
 		}
 
 		Instance.TurnsRemaining -= 1;
-
 		if (Instance.TurnsRemaining > 0)
 		{
 			continue;
 		}
 
 		const int32 ExpiredInstanceId = Instance.InstanceId;
-		const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context);
-		if (Data)
+		if (const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context))
 		{
 			OnAlertExpired_BP(Instance, *Data);
 		}
 
 		OnAlertExpired.Broadcast(ExpiredInstanceId);
-
-		UE_LOG(LogTemp, Log, TEXT("Alert expired. InstanceId=%d Row=%s"),
-			ExpiredInstanceId, *Instance.AlertRowName.ToString());
-
 		RemoveAlertAtIndex(i);
+	}
+
+	const int32 CurrentTurn = GameManager ? GameManager->CurrentTurn : 0;
+	const bool bForceSpawn = (GuaranteedSpawnEveryNTurns > 0) && ((CurrentTurn - LastSpawnTurn) >= GuaranteedSpawnEveryNTurns);
+	const bool bRollSpawn = (FMath::RandRange(1, 100) <= SpawnChancePercent);
+
+	if ((bForceSpawn || bRollSpawn) && TrySpawnRandomAlert())
+	{
+		LastSpawnTurn = CurrentTurn;
 	}
 }
 
@@ -308,6 +398,43 @@ bool AAlertManager::GetAlertDisplayData(int32 AlertInstanceId, FActiveAlertInsta
 
 	OutInstance = ActiveAlerts[Index];
 	OutData = *Data;
+	return true;
+}
+
+bool AAlertManager::GetAlertOptionAvailability(int32 AlertInstanceId, TArray<FAlertOptionAvailability>& OutAvailability) const
+{
+	OutAvailability.Empty();
+
+	if (!AlertDataTable)
+	{
+		return false;
+	}
+
+	const int32 Index = FindActiveAlertIndexById(AlertInstanceId);
+	if (Index == INDEX_NONE)
+	{
+		return false;
+	}
+
+	static const FString Context(TEXT("GetAlertOptionAvailability"));
+	const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(ActiveAlerts[Index].AlertRowName, Context);
+	if (!Data)
+	{
+		return false;
+	}
+
+	for (const FAlertOptionData& OptionData : Data->Options)
+	{
+		FAlertOptionAvailability Availability;
+		FText FailureReason;
+		Availability.bIsAvailable = EvaluateOptionRequirements(ActiveAlerts[Index], OptionData, FailureReason);
+		Availability.BlockReason = Availability.bIsAvailable
+			? FText::GetEmpty()
+			: (!OptionData.UnavailableReasonOverride.IsEmpty() ? OptionData.UnavailableReasonOverride : FailureReason);
+
+		OutAvailability.Add(Availability);
+	}
+
 	return true;
 }
 
@@ -423,7 +550,6 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 		return false;
 
 	case EAlertEffectType::SpawnUnit:
-		// Use BP hook for project-specific spawn mapping from EffectPayload / EffectMagnitude.
 		OnAlertCustomEffect_BP(Instance, OptionData);
 		return true;
 
@@ -467,8 +593,88 @@ int32 AAlertManager::FindActiveAlertIndexById(int32 AlertInstanceId) const
 
 void AAlertManager::RemoveAlertAtIndex(int32 Index)
 {
-	if (ActiveAlerts.IsValidIndex(Index))
+	if (!ActiveAlerts.IsValidIndex(Index))
 	{
-		ActiveAlerts.RemoveAt(Index);
+		return;
 	}
+
+	const int32 InstanceId = ActiveAlerts[Index].InstanceId;
+	UnregisterAlertTileLink(InstanceId);
+
+	ActiveAlerts.RemoveAt(Index);
+}
+
+void AAlertManager::RegisterAlertTileLink(int32 AlertInstanceId, const FIntVector& TileCoords)
+{
+	AlertIdToTileCoords.Add(AlertInstanceId, TileCoords);
+	TileCoordsToAlertId.Add(TileCoords, AlertInstanceId);
+	SetTileAlertIndicator(TileCoords, true);
+}
+
+void AAlertManager::UnregisterAlertTileLink(int32 AlertInstanceId)
+{
+	const FIntVector* FoundCoords = AlertIdToTileCoords.Find(AlertInstanceId);
+	if (!FoundCoords)
+	{
+		return;
+	}
+
+	SetTileAlertIndicator(*FoundCoords, false);
+	TileCoordsToAlertId.Remove(*FoundCoords);
+	AlertIdToTileCoords.Remove(AlertInstanceId);
+}
+
+void AAlertManager::SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible)
+{
+	if (!TileManager)
+	{
+		return;
+	}
+
+	if (ATile* const* FoundTile = TileManager->TileLookup.Find(TileCoords))
+	{
+		if (IsValid(*FoundTile))
+		{
+			(*FoundTile)->SetAlertIndicatorVisible(bVisible);
+		}
+	}
+}
+
+void AAlertManager::HandleAlertClickFromCursor()
+{
+	if (!CacheManagerReferences())
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	if (!PlayerController->WasInputKeyJustPressed(EKeys::LeftMouseButton))
+	{
+		return;
+	}
+
+	FHitResult Hit;
+	if (!PlayerController->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+	{
+		return;
+	}
+
+	ATile* ClickedTile = Cast<ATile>(Hit.GetActor());
+	if (!ClickedTile)
+	{
+		return;
+	}
+
+	const int32* AlertInstanceId = TileCoordsToAlertId.Find(ClickedTile->GridCoordinates);
+	if (!AlertInstanceId)
+	{
+		return;
+	}
+
+	OnAlertSelected.Broadcast(*AlertInstanceId);
 }

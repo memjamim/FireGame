@@ -7,6 +7,7 @@
 
 class ATileManager;
 class AUnit;
+class AAlertManager;
 
 // Turn State
 UENUM(BlueprintType)
@@ -63,6 +64,9 @@ protected:
 	// Reference to tile manager
 	UPROPERTY()
 	ATileManager* TileManager = nullptr;
+	AAlertManager* AlertManager = nullptr;
+
+	void CacheAlertManager();
 
 public:
 	virtual void Tick(float DeltaTime) override;

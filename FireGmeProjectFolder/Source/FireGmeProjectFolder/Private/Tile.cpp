@@ -1,4 +1,5 @@
 #include "Tile.h"
+#include "UObject/ConstructorHelpers.h" 
 
 // Sets default values
 ATile::ATile()
@@ -7,6 +8,22 @@ ATile::ATile()
 
 	TileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TileMesh"));
 	RootComponent = TileMesh;
+
+	AlertIndicator = CreateDefaultSubobject<UBillboardComponent>(TEXT("AlertIndicator"));
+	AlertIndicator->SetupAttachment(RootComponent);
+	AlertIndicator->SetHiddenInGame(true);
+	AlertIndicator->SetVisibility(false);
+	AlertIndicator->SetRelativeLocation(FVector(0.f, 0.f, AlertIndicatorZOffset));
+	AlertIndicator->SetUsingAbsoluteRotation(true);
+	AlertIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	static ConstructorHelpers::FObjectFinder<UTexture2D> AlertSpriteObj(
+		TEXT("/Game/FireGame/UI/T_Alert-Icon.T_Alert-Icon")); 
+	if (AlertSpriteObj.Succeeded())
+	{
+		AlertIndicatorTexture = AlertSpriteObj.Object;
+		AlertIndicator->SetSprite(AlertIndicatorTexture);
+	}
 }
 
 // Called when the game starts or when spawned
@@ -48,6 +65,23 @@ void ATile::Extinguish()
 {
 	bIsBurning = false;
 	bWillIgniteNextTurn = false;
+}
+
+void ATile::SetAlertIndicatorVisible(bool bVisible)
+{
+	if (!AlertIndicator)
+	{
+		return;
+	}
+
+	AlertIndicator->SetHiddenInGame(!bVisible);
+	AlertIndicator->SetVisibility(bVisible);
+	AlertIndicator->SetRelativeLocation(FVector(0.f, 0.f, AlertIndicatorZOffset));
+}
+
+bool ATile::IsAlertIndicatorVisible() const
+{
+	return AlertIndicator && AlertIndicator->IsVisible();
 }
 
 bool ATile::ApplyDataFromRowName(FName RowName)

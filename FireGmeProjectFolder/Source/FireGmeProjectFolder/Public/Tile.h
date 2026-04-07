@@ -5,6 +5,8 @@
 #include "TileDataRow.h"
 #include "Engine/DataTable.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/BillboardComponent.h" 
+#include "Engine/Texture2D.h"       
 #include "Tile.generated.h"
 
 class ATileManager;
@@ -16,6 +18,21 @@ class FIREGMEPROJECTFOLDER_API ATile : public AActor
 
 public:
 	ATile();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tile|Alert")
+	UBillboardComponent* AlertIndicator = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Tile|Alert")
+	TObjectPtr<UTexture2D> AlertIndicatorTexture = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Alert")
+	float AlertIndicatorZOffset = 140.f;
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Alert")
+	void SetAlertIndicatorVisible(bool bVisible);
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Alert")
+	bool IsAlertIndicatorVisible() const;
 
 protected:
 	virtual void BeginPlay() override;

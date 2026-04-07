@@ -13,6 +13,7 @@ class ATile;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAlertSpawned, int32, AlertInstanceId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAlertResolved, int32, AlertInstanceId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAlertExpired, int32, AlertInstanceId);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAlertSelected, int32, AlertInstanceId);
 
 USTRUCT(BlueprintType)
 struct FIREGMEPROJECTFOLDER_API FActiveAlertInstance
@@ -38,6 +39,18 @@ struct FIREGMEPROJECTFOLDER_API FActiveAlertInstance
 	bool bResolved = false;
 };
 
+USTRUCT(BlueprintType)
+struct FIREGMEPROJECTFOLDER_API FAlertOptionAvailability
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
+	bool bIsAvailable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
+	FText BlockReason;
+};
+
 UCLASS()
 class FIREGMEPROJECTFOLDER_API AAlertManager : public AActor
 {
@@ -58,6 +71,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Rules")
 	int32 MaxConcurrentAlerts = 3;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Rules", meta = (ClampMin = "0", ClampMax = "100"))
+	int32 SpawnChancePercent = 45;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Rules", meta = (ClampMin = "0"))
+	int32 GuaranteedSpawnEveryNTurns = 4;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Alert|Runtime")
 	TArray<FActiveAlertInstance> ActiveAlerts;
 
@@ -70,6 +89,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Alert|Events")
 	FOnAlertExpired OnAlertExpired;
 
+	UPROPERTY(BlueprintAssignable, Category = "Alert|Events")
+	FOnAlertSelected OnAlertSelected;
+
 	UFUNCTION(BlueprintCallable, Category = "Alert")
 	bool TrySpawnRandomAlert();
 
@@ -81,6 +103,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Alert")
 	bool GetAlertDisplayData(int32 AlertInstanceId, FActiveAlertInstance& OutInstance, FAlertData& OutData) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Alert")
+	bool GetAlertOptionAvailability(int32 AlertInstanceId, TArray<FAlertOptionAvailability>& OutAvailability) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Alert")
+	bool CanResolveAlertOption(int32 AlertInstanceId, int32 OptionIndex, FText& OutFailureReason) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Alert")
 	const TArray<FActiveAlertInstance>& GetActiveAlerts() const { return ActiveAlerts; }
@@ -98,6 +126,15 @@ protected:
 	UPROPERTY()
 	int32 NextAlertInstanceId = 1;
 
+	UPROPERTY()
+	int32 LastSpawnTurn = 0;
+
+	UPROPERTY()
+	TMap<int32, FIntVector> AlertIdToTileCoords;
+
+	UPROPERTY()
+	TMap<FIntVector, int32> TileCoordsToAlertId;
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "Alert")
 	void OnAlertSpawned_BP(const FActiveAlertInstance& AlertInstance, const FAlertData& AlertData);
 
@@ -114,10 +151,16 @@ private:
 	bool CacheManagerReferences();
 	bool IsTileAllowedForAlert(const ATile* Tile, const FAlertData& AlertData) const;
 	bool DoesUnitRequirementPass(const FIntVector& AlertTileCoords, const FAlertUnitRequirement& Requirement) const;
+	bool EvaluateOptionRequirements(const FActiveAlertInstance& Instance, const FAlertOptionData& OptionData, FText& OutFailureReason) const;
 
 	bool ApplyOptionEffect(const FActiveAlertInstance& Instance, const FAlertOptionData& OptionData);
 	bool TryApplyActionPointCost(int32 ActionPointCost);
 
 	int32 FindActiveAlertIndexById(int32 AlertInstanceId) const;
 	void RemoveAlertAtIndex(int32 Index);
+
+	void SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible);
+	void RegisterAlertTileLink(int32 AlertInstanceId, const FIntVector& TileCoords);
+	void UnregisterAlertTileLink(int32 AlertInstanceId);
+	void HandleAlertClickFromCursor();
 };

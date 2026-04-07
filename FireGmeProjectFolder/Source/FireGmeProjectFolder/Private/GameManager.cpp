@@ -4,6 +4,7 @@
 #include "TileManager.h"
 #include "Unit.h"
 #include "AudioManager.h"
+#include "AlertManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "UnitDataRow.h"
 
@@ -55,8 +56,10 @@ void AGameManager::BeginPlay()
 	}
 
 	// Optionally start turn 1 immediately (so UI can show "Turn 1" at game start)
+	CacheAlertManager();
 	StartPlayerTurn();
 }
+
 
 void AGameManager::Tick(float DeltaTime)
 {
@@ -79,6 +82,21 @@ AGameManager* AGameManager::GetGameManager(const UObject* WorldContextObject)
 	TArray<AActor*> Found;
 	UGameplayStatics::GetAllActorsOfClass(World, AGameManager::StaticClass(), Found);
 	return (Found.Num() > 0) ? Cast<AGameManager>(Found[0]) : nullptr;
+}
+
+void AGameManager::CacheAlertManager()
+{
+	if (AlertManager)
+	{
+		return;
+	}
+
+	TArray<AActor*> FoundAlertManagers;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAlertManager::StaticClass(), FoundAlertManagers);
+	if (FoundAlertManagers.Num() > 0)
+	{
+		AlertManager = Cast<AAlertManager>(FoundAlertManagers[0]);
+	}
 }
 
 void AGameManager::SetActionPoints(int32 NewActionPoints)
@@ -247,6 +265,12 @@ void AGameManager::DoRandomEvent()
 		{
 			WindDirection = rand() % 6;
 		}
+	}
+
+	CacheAlertManager();
+	if (AlertManager)
+	{
+		AlertManager->ProcessTurnStart();
 	}
 
 	// Random events done -> next player turn

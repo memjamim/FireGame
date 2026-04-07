@@ -23,11 +23,9 @@ struct FIREGMEPROJECTFOLDER_API FAlertUnitRequirement
 {
 	GENERATED_BODY()
 
-	// Unit row name from DT_Unit (or other identifier you use)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirement")
 	int32 RequiredUnitID = 0;
 
-	// Required distance from event tile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirement")
 	int32 RequiredRadius = 0;
 };
@@ -43,8 +41,30 @@ struct FIREGMEPROJECTFOLDER_API FAlertOptionData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
 	int32 ActionPointCost = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
+	// Existing requirement
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
 	FAlertUnitRequirement UnitRequirement;
+
+	// New optional requirements
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
+	int32 MinimumCityHealth = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
+	int32 MaximumCityHealth = MAX_int32;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
+	int32 MinimumTurn = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
+	int32 MaximumTurn = MAX_int32;
+
+	// -1 = any direction
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
+	int32 RequiredWindDirection = -1;
+
+	// Optional UI message when blocked
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
+	FText UnavailableReasonOverride;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
 	EAlertEffectType EffectType = EAlertEffectType::None;
@@ -52,7 +72,6 @@ struct FIREGMEPROJECTFOLDER_API FAlertOptionData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
 	int32 EffectMagnitude = 0;
 
-	// Optional custom payload for Blueprint or C++ dispatch
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
 	FName EffectPayload = NAME_None;
 };
@@ -62,7 +81,6 @@ struct FIREGMEPROJECTFOLDER_API FAlertData : public FTableRowBase
 {
 	GENERATED_BODY()
 
-	// Stable identifier
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
 	FName AlertId = NAME_None;
 
@@ -72,15 +90,15 @@ struct FIREGMEPROJECTFOLDER_API FAlertData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
 	FText Narrative;
 
-	// If empty, can spawn on any tile
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|UI")
+	TSoftObjectPtr<UTexture2D> SplashImage = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
 	TArray<FName> AllowedTileTypes;
 
-	// How many turns player has to respond
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
 	int32 TurnsToRespond = 2;
 
-	// Spawn weighting for random selection
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
 	int32 Weight = 1;
 
