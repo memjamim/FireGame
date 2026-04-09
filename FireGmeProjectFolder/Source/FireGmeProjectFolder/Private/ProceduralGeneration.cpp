@@ -131,7 +131,7 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 	TArray<FIntVector> TileArray = ChosenTiles.Array();
 
 	// Number of Residential Tile clusters we allow the map to have.
-	int32 ResidentialClusters = 4;
+	int32 ResidentialClusters = 5;
 
 	for (int i = 0; i < ResidentialClusters; i++)
 	{
@@ -154,7 +154,7 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 	}
 
 	// Number of Forest Tile clusters we allow the map to have.
-	int32 ForestClusters = 5;
+	int32 ForestClusters = 4;
 
 	for (int i = 0; i < ForestClusters; i++)
 	{
