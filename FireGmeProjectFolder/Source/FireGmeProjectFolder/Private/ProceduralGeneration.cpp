@@ -131,12 +131,12 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 	TArray<FIntVector> TileArray = ChosenTiles.Array();
 
 	// Number of Residential Tile clusters we allow the map to have.
-	int32 ResidentialClusters = 1;
+	int32 ResidentialClusters = 4;
 
 	for (int i = 0; i < ResidentialClusters; i++)
 	{
 		FIntVector Seed = TileArray[FMath::RandRange(0, TileArray.Num() - 1)]; // Choose a random Tile...
-		int32 ClusterSize = 2; //FMath::RandRange(2, 7); // ...choose a random size for the Residential cluster...
+		int32 ClusterSize = FMath::RandRange(2, 7); // ...choose a random size for the Residential cluster...
 
 		TSet<FIntVector> Cluster; // ...create a set for the Residential Tile coordinates...
 
@@ -154,7 +154,7 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 	}
 
 	// Number of Forest Tile clusters we allow the map to have.
-	int32 ForestClusters = 0;
+	int32 ForestClusters = 5;
 
 	for (int i = 0; i < ForestClusters; i++)
 	{
