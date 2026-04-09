@@ -1,8 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Unit.h"
+#include "AudioManager.h"
 #include "GameFramework/Actor.h"
 #include "GameManager.generated.h"
+
+
 
 // Turn State
 UENUM(BlueprintType)
@@ -33,6 +37,10 @@ protected:
 	// Reference to tile manager
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Managers")
 	ATileManager* TileManager = nullptr;
+
+	// Reference to audio manager
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Managers")
+	AAudioManager* AudioManager = nullptr;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -67,6 +75,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Turns|Events")
 	FOnActionPointsChanged OnActionPointsChanged;
+
+	// An array of all Units on the map at a given time.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Units")
+	TArray<AUnit*> UnitsInPlay;
 
 
 	// Find the active GameManager in the world
@@ -111,6 +123,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoRandomEvent();
+
+	UFUNCTION(BlueprintCallable, Category = "Units")
+	void RegisterUnit(AUnit* UnitToRegister);
+
+	UFUNCTION(BlueprintCallable, Category = "Units")
+	void UnregisterUnit(AUnit* UnitToDeregister);
 
 protected:
 	// Increments the turn counter and notifies BP

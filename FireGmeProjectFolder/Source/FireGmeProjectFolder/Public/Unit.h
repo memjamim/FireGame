@@ -161,6 +161,10 @@ public:
 	virtual bool CanUseSpecial(int32 ActionCost) const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
+	void EvacuateResidents();
+	virtual void EvacuateResidents_Implementation();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
 	void ExecuteAbility(const TArray<ATile*>& TargetTiles);
 	virtual void ExecuteAbility_Implementation(const TArray<ATile*>& TargetTiles);
 

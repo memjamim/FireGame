@@ -2,12 +2,14 @@
 
 #include "GameManager.h"
 #include "TileManager.h"
+#include "Engine/Engine.h"
 #include "Unit.h"
+#include "Tile.h"
 #include "AudioManager.h"
 #include "Kismet/GameplayStatics.h"
 
 /** The maximum city health */
-static const int32 MAX_CITY_HEALTH = 100;
+static const int32 MAX_CITY_HEALTH = 10;
 
 /** AP the player starts with */
 static const int32 STARTING_AP = 3;
@@ -41,15 +43,21 @@ void AGameManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Find TileManager if not assigned
+	// Find TileManager and AudioManager if not assigned
 	if (!TileManager)
 	{
-		TArray<AActor*> FoundManagers;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATileManager::StaticClass(), FoundManagers);
+		TArray<AActor*> FoundTileManagers;
+		TArray<AActor*> FoundAudioManagers;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATileManager::StaticClass(), FoundTileManagers);
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAudioManager::StaticClass(), FoundAudioManagers);
 
-		if (FoundManagers.Num() > 0)
+		if (FoundTileManagers.Num() > 0)
 		{
-			TileManager = Cast<ATileManager>(FoundManagers[0]);
+			TileManager = Cast<ATileManager>(FoundTileManagers[0]);
+		}
+		if (FoundAudioManagers.Num() > 0)
+		{
+			AudioManager = Cast<AAudioManager>(FoundAudioManagers[0]);
 		}
 	}
 
@@ -138,6 +146,23 @@ void AGameManager::EndTurn()
 	{
 	case TBGameState::PLAYER_TURN:
 		// End player actions -> proceed to fire turn
+		UE_LOG(LogTemp, Log, TEXT("UnitsInPlay array size: %d"), UnitsInPlay.Num());
+		for (AUnit* Unit : UnitsInPlay)
+		{
+			if (!Unit || !Unit->CurrentTile) // Check if both the Unit and the Tile are valid.
+				continue;
+
+			if (Unit->UnitData.ID != 2) // Check if the Unit is a Residential Firefiter.
+				continue;
+
+			if (Unit->CurrentTile->TileID != 4) // Check if the Unit's CurrentTile is a Residential Tile.
+				continue;
+
+			UE_LOG(LogTemp, Log, TEXT("Residential Firefighter has reduced health cost of a tile."));
+
+			Unit->EvacuateResidents();
+		}
+		AudioManager->PlayEndTurnButtonSound();
 		CurrentState = TBGameState::FIRE_TURN;
 		DoFireTurn();
 		break;
@@ -251,4 +276,22 @@ void AGameManager::DoRandomEvent()
 
 	// Random events done -> next player turn
 	EndTurn();
+}
+
+// Adds a new Unit to the GameManager's array.
+void AGameManager::RegisterUnit(AUnit* UnitToRegister)
+{
+	if (UnitToRegister)
+	{
+		UnitsInPlay.AddUnique(UnitToRegister);
+	}
+}
+
+// Removes a Unit from the GameManager's array (this likely won't be used, but it may be nice to have).
+void AGameManager::UnregisterUnit(AUnit* UnitToDeregister)
+{
+	if (UnitToDeregister)
+	{
+		UnitsInPlay.Remove(UnitToDeregister);
+	}
 }
