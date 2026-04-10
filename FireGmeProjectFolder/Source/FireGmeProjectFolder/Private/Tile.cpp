@@ -47,6 +47,7 @@ void ATile::Ignite()
 void ATile::Extinguish()
 {
 	bIsBurning = false;
+	bWillIgniteNextTurn = false;
 }
 
 void ATile::ReduceCommunityHealthCost()

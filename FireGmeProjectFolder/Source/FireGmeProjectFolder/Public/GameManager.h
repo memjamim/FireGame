@@ -4,9 +4,11 @@
 #include "Unit.h"
 #include "AudioManager.h"
 #include "GameFramework/Actor.h"
+#include "Engine/DataTable.h"
 #include "GameManager.generated.h"
 
-
+class ATileManager;
+class AUnit;
 
 // Turn State
 UENUM(BlueprintType)
@@ -18,10 +20,36 @@ enum class TBGameState : uint8
 	RANDOM_EVENTS = 3
 };
 
-class ATileManager;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnStarted, int32, NewTurn);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionPointsChanged, int32, NewActionPoints);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnStarted, int32, NewTurnNumber);
+
+// Queue delegates
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeploymentQueueChanged);
+
+/**
+ * A single pending deployment entry
+ */
+USTRUCT(BlueprintType)
+struct FIREGMEPROJECTFOLDER_API FPendingUnitDeployment
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deployment")
+	FName UnitRowName = NAME_None;
+
+	// Where the unit should deploy (hex cube coords)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deployment")
+	FIntVector SpawnCoords = FIntVector::ZeroValue;
+
+	// Counts down each StartPlayerTurn(); deploys when <= 0
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deployment")
+	int32 TurnsRemaining = 0;
+
+	// Helpful for sorting/debugging/UI
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Deployment")
+	int32 TurnQueued = 0;
+};
 
 UCLASS()
 class FIREGMEPROJECTFOLDER_API AGameManager : public AActor
@@ -35,7 +63,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	// Reference to tile manager
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Managers")
+	UPROPERTY()
 	ATileManager* TileManager = nullptr;
 
 	// Reference to audio manager
@@ -45,52 +73,41 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
-	// =========================
-	// Turn / Game State
-	// =========================
+	UFUNCTION(BlueprintCallable, Category = "GameManager", meta = (WorldContext = "WorldContextObject"))
+	static AGameManager* GetGameManager(const UObject* WorldContextObject);
 
-	// City health
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 CityHealth;
 
-	// Wind direction (0..5)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wind")
 	int32 WindDirection;
 
-	// Action Points
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 ActionPoints;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	TBGameState CurrentState;
 
-	// Current turn counter used for unit deployment math
-	// Starts at 1 when the first player turn begins.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Turns")
-	int32 CurrentTurn = 0;
+	// Turn counter
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
+	int32 CurrentTurn;
 
-	// Events (for UI)
-	UPROPERTY(BlueprintAssignable, Category = "Turns|Events")
-	FOnTurnStarted OnTurnStarted;
+	// Set this in BP_GameManager / MyGameManager instance
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Units")
+	UDataTable* UnitDataTable = nullptr;
 
-	UPROPERTY(BlueprintAssignable, Category = "Turns|Events")
+	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnActionPointsChanged OnActionPointsChanged;
 
 	// An array of all Units on the map at a given time.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Units")
 	TArray<AUnit*> UnitsInPlay;
 
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnTurnStarted OnTurnStarted;
 
-	// Find the active GameManager in the world
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game", meta = (WorldContext = "WorldContextObject"))
-	static AGameManager* GetGameManager(const UObject* WorldContextObject);
-
-	// Turn / AP getters & setters
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Turns")
-	int32 GetCurrentTurn() const { return CurrentTurn; }
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Turns")
-	int32 GetActionPoints() const { return ActionPoints; }
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnDeploymentQueueChanged OnDeploymentQueueChanged;
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void SetActionPoints(int32 NewActionPoints);
@@ -98,17 +115,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void AddActionPoints(int32 Delta);
 
-	// Spend AP safely in BP
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	bool TrySpendActionPoints(int32 Cost);
-
-	// Wind accessors
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Wind")
-	int32 GetWindDirection() const { return WindDirection; }
 
 	UFUNCTION(BlueprintCallable, Category = "Wind")
 	void SetWindDirection(int32 NewWindDirection);
 
+	UFUNCTION(BlueprintCallable, Category = "Turns")
+	void AdvanceTurnCounter();
+
+	// ---- Turn flow
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void EndTurn();
 
@@ -129,8 +145,48 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Units")
 	void UnregisterUnit(AUnit* UnitToDeregister);
+	// Deplyment Queue
+
+	// Blueprint-readable so UI can show arrives in X turns
+	UPROPERTY(BlueprintReadOnly, Category = "Deployments")
+	TArray<FPendingUnitDeployment> PendingDeployments;
+
+	/**
+	 * UI calls this instead of spawning immediately.
+	 * Spends AP immediately (Action_Cost)
+	 * Adds a pending deployment with Turns_To_Deploy
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Deployments")
+	bool PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoords);
+
+	/** Allow UI to clear queue (debug) */
+	UFUNCTION(BlueprintCallable, Category = "Deployments")
+	void ClearDeploymentQueue();
+
+	/** Helper for UI */
+	UFUNCTION(BlueprintCallable, Category = "Deployments")
+	const TArray<FPendingUnitDeployment>& GetPendingDeployments() const { return PendingDeployments; }
 
 protected:
-	// Increments the turn counter and notifies BP
-	void AdvanceTurnCounter();
+	// Tick down queue and deploy ready units at start of player turn
+	void ProcessDeploymentQueue();
+
+	// Spawn & initialize a unit
+	AUnit* DeployUnitNow(const FPendingUnitDeployment& Deployment);
+
+	/**
+	 * Blueprint hook called when a unit is queued
+	 * (Place to refresh shop UI, play SFX...)
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Deployments")
+	void OnUnitQueued_BP(const FPendingUnitDeployment& Deployment);
+
+	/**
+	 * Blueprint hook called after a unit is deployed (spawned, applied row, snapped to tile).
+	 * This is where you can:
+	 * Get PlayerController 0 -> Cast BP_CameraController -> Add to SpawnedUnits array
+	 * Print confirmation strings
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "Deployments")
+	void OnUnitDeployed_BP(AUnit* NewUnit, FName UnitRowName, FIntVector SpawnCoords);
 };
