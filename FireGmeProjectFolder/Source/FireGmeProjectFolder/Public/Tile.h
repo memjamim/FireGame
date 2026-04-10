@@ -112,4 +112,23 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Tile|Grid")
 	void SyncWorldFromGrid();
+
+	// Copied select-functionality from unit
+
+	UPROPERTY(BlueprintReadWrite, Category = "Tile|Selection")
+	bool bIsSelected = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Selection")
+	void Select();
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Selection")
+	void Deselect();
+
+	/** Override in Blueprint for visual feedback. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Tile|Selection")
+	void OnSelected();
+
+	/** Override in Blueprint to remove visual feedback. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Tile|Selection")
+	void OnDeselected();
 };
