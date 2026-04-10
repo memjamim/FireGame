@@ -50,6 +50,19 @@ void ATile::Extinguish()
 	bWillIgniteNextTurn = false;
 }
 
+void ATile::ReduceCommunityHealthCost()
+{
+	if (CommunityHealthCost > 2) {
+		CommunityHealthCost--;
+		UE_LOG(LogTemp, Log, TEXT("New Community Health Cost: %d"), CommunityHealthCost);
+	}
+}
+
+int32 ATile::GetTileID()
+{
+	return TileID;
+}
+
 bool ATile::ApplyDataFromRowName(FName RowName)
 {
 	if (!TileDataTable)

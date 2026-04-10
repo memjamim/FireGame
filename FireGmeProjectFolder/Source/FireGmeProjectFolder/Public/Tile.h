@@ -97,6 +97,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tile|Data")
 	bool ApplyDataFromRowName(FName RowName);
 
+	UFUNCTION(BlueprintCallable, Category = "Tile|Data")
+	void ReduceCommunityHealthCost();
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Data")
+	int32 GetTileID();
+
 	// Called by C++; actual implementation is in BP_Tile
 	UFUNCTION(BlueprintNativeEvent, Category = "Tile|Grid")
 	FIntVector ConvertWorldToGridCoordinates(const FVector& WorldLocation) const;
