@@ -665,6 +665,11 @@ void AAlertManager::HandleAlertClickFromCursor()
 	}
 
 	ATile* ClickedTile = Cast<ATile>(Hit.GetActor());
+	if (!ClickedTile && Hit.GetComponent())
+	{
+		ClickedTile = Cast<ATile>(Hit.GetComponent()->GetOwner());
+	}
+
 	if (!ClickedTile)
 	{
 		return;
@@ -676,5 +681,7 @@ void AAlertManager::HandleAlertClickFromCursor()
 		return;
 	}
 
+
 	OnAlertSelected.Broadcast(*AlertInstanceId);
+	OnAlertSelected_BP(*AlertInstanceId);
 }

@@ -15,16 +15,21 @@ ATile::ATile()
 	AlertIndicator->SetVisibility(false);
 	AlertIndicator->SetRelativeLocation(FVector(0.f, 0.f, AlertIndicatorZOffset));
 	AlertIndicator->SetUsingAbsoluteRotation(true);
+
+	AlertIndicator->SetCollisionObjectType(ECC_WorldDynamic);
+	AlertIndicator->SetCollisionResponseToAllChannels(ECR_Ignore);
+	AlertIndicator->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	AlertIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	static ConstructorHelpers::FObjectFinder<UTexture2D> AlertSpriteObj(
-		TEXT("/Game/FireGame/UI/T_Alert-Icon.T_Alert-Icon")); 
+		TEXT("/Game/FireGame/UI/T_Alert-Icon.T_Alert-Icon"));
 	if (AlertSpriteObj.Succeeded())
 	{
 		AlertIndicatorTexture = AlertSpriteObj.Object;
 		AlertIndicator->SetSprite(AlertIndicatorTexture);
 	}
 }
+
 
 // Called when the game starts or when spawned
 void ATile::BeginPlay()
@@ -76,6 +81,7 @@ void ATile::SetAlertIndicatorVisible(bool bVisible)
 
 	AlertIndicator->SetHiddenInGame(!bVisible);
 	AlertIndicator->SetVisibility(bVisible);
+	AlertIndicator->SetCollisionEnabled(bVisible ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 	AlertIndicator->SetRelativeLocation(FVector(0.f, 0.f, AlertIndicatorZOffset));
 }
 

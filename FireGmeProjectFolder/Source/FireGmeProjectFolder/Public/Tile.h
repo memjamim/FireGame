@@ -26,7 +26,7 @@ public:
 	TObjectPtr<UTexture2D> AlertIndicatorTexture = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Alert")
-	float AlertIndicatorZOffset = 140.f;
+	float AlertIndicatorZOffset = 300.0f;
 
 	UFUNCTION(BlueprintCallable, Category = "Tile|Alert")
 	void SetAlertIndicatorVisible(bool bVisible);

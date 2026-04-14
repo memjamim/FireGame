@@ -147,6 +147,9 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Alert")
 	void OnAlertCustomEffect_BP(const FActiveAlertInstance& AlertInstance, const FAlertOptionData& OptionData);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Alert")
+	void OnAlertSelected_BP(int32 AlertInstanceId);
+
 private:
 	bool CacheManagerReferences();
 	bool IsTileAllowedForAlert(const ATile* Tile, const FAlertData& AlertData) const;
