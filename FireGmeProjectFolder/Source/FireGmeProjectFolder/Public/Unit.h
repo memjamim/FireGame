@@ -8,6 +8,7 @@
 class ATile;
 class ATileManager;
 class AGameManager;
+class AAudioManager;
 
 UCLASS()
 class FIREGMEPROJECTFOLDER_API AUnit : public AActor
@@ -32,6 +33,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|References")
 	AGameManager* GameManager;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Unit|References")
+	AAudioManager* AudioManager;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -184,6 +188,8 @@ private:
 	ATileManager* FindTileManager() const;
 
 	AGameManager* FindGameManager() const;
+
+	AAudioManager* FindAudioManager() const;
 
 	
 	ATile* PendingTargetTile = nullptr;

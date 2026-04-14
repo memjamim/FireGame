@@ -1,5 +1,6 @@
 #include "Unit.h"
 #include "Tile.h"
+#include "AudioManager.h"
 #include "TileManager.h"
 #include "GameManager.h"
 #include "GameManager.h"
@@ -20,6 +21,7 @@ AUnit::AUnit()
 	CurrentTile = nullptr;
 	TileManager = nullptr;
 	GameManager = nullptr;
+	AudioManager = nullptr;
 
 	GridCoordinates = FIntVector::ZeroValue;
 	bIsSelected = false;
@@ -39,6 +41,7 @@ void AUnit::BeginPlay()
 	// Cache the TileManager reference
 	TileManager = FindTileManager();
 	GameManager = FindGameManager();
+	AudioManager = FindAudioManager();
 	
 
 	if (!TileManager)
@@ -221,6 +224,7 @@ bool AUnit::MoveToTile(FIntVector TargetCoordinates)
 		return false;
 	}
 
+	AudioManager->PlayUnitTranslatingSound(this); // Play the translating sound for this Unit.
 	StartTranslationToTile(TargetTile);
 	return true;
 }
@@ -311,6 +315,7 @@ void AUnit::UpdateTranslation(float DeltaTime)
 
 		SetCurrentTile(ReachedTile);
 		bHasMovedThisTurn = true;
+		AudioManager->PlayUnitSettlingSound(this); // Play the settling sound for this Unit.
 		OnMoveComplete();
 	}
 }
@@ -512,6 +517,19 @@ AGameManager* AUnit::FindGameManager() const
 	if (Found.Num() > 0)
 	{
 		return Cast<AGameManager>(Found[0]);
+	}
+
+	return nullptr;
+}
+
+AAudioManager* AUnit::FindAudioManager() const
+{
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAudioManager::StaticClass(), Found);
+
+	if (Found.Num() > 0)
+	{
+		return Cast<AAudioManager>(Found[0]);
 	}
 
 	return nullptr;
