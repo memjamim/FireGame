@@ -35,7 +35,7 @@ public:
 
 	// Community health from 0-100
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game")
-	int32 CommunityHealth = 100;
+	int32 CommunityHealth = 10;
 
 	// Tile ID to assign when a tile becomes charred
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")

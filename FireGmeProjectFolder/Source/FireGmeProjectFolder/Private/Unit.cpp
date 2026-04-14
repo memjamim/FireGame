@@ -85,6 +85,16 @@ void AUnit::BeginPlay()
 				GridCoordinates.X, GridCoordinates.Y, GridCoordinates.Z);
 		}
 	}
+	if (!GameManager)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s: No AGameManager found in the level."), *GetName());
+		return;
+	}
+	else
+	{
+		GameManager->RegisterUnit(this);
+		UE_LOG(LogTemp, Log, TEXT("%s registered with GameManager."), *GetName());
+	}
 
 }
 
@@ -445,6 +455,12 @@ void AUnit::ExecuteSpecial_Implementation(const TArray<ATile*>& TargetTiles, int
 
 	// Mark special as used for this turn
 	bHasUsedSpecialThisTurn = true;
+}
+
+void AUnit::EvacuateResidents_Implementation()
+{
+	// Reduce the current standing tile's CommunityHealthCost by one.
+	CurrentTile->ReduceCommunityHealthCost();
 }
 
 void AUnit::ConsumeStamina(int32 Amount)
