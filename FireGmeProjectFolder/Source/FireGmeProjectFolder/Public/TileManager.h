@@ -52,9 +52,9 @@ public:
 	AGameManager* GameManager = nullptr;
 
 	// Chance for NON-wind neighbors to ignite: Numerator / Denominator
-	// Currently 3/6 = 50% each of the 5 non-wind direction neighbors.
+	// Currently 2/6 = 33% each of the 5 non-wind direction neighbors.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire|Spread")
-	int32 NonWindSpreadNumerator = 3;
+	int32 NonWindSpreadNumerator = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire|Spread")
 	int32 NonWindSpreadDenominator = 6;

@@ -4,9 +4,32 @@
 ATile::ATile()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bIsSelected = false;
 
 	TileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TileMesh"));
 	RootComponent = TileMesh;
+}
+
+void ATile::Select()
+{
+	bIsSelected = true;
+	OnSelected();
+}
+
+void ATile::Deselect()
+{
+	bIsSelected = false;
+	OnDeselected();
+}
+
+void ATile::OnSelected_Implementation()
+{
+	// Override in Blueprint — highlight unit, show movement range, etc.
+}
+
+void ATile::OnDeselected_Implementation()
+{
+	// Override in Blueprint — remove visual feedback
 }
 
 // Called when the game starts or when spawned
