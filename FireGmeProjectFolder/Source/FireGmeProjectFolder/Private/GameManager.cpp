@@ -10,7 +10,7 @@
 #include "UnitDataRow.h"
 
 /** The maximum city health */
-static const int32 MAX_CITY_HEALTH = 10;
+static const int32 MAX_CITY_HEALTH = 100;
 
 /** AP the player starts with */
 static const int32 STARTING_AP = 3;
@@ -167,6 +167,7 @@ void AGameManager::EndTurn()
 		break;
 
 	case TBGameState::FIRE_TURN:
+		AudioManager->PlayFireSpreadingSound();
 		CurrentState = TBGameState::RANDOM_EVENTS;
 		DoRandomEvent();
 		break;

@@ -147,8 +147,8 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 		{
 			if (ATile* Tile = TileManager->TileLookup.FindRef(Coord))
 			{
-
 				Tile->ApplyDataFromID(ResidentialTileID);
+				TileManager->ResidentialTiles.Add(Tile);
 			}
 		}
 	}
@@ -203,6 +203,7 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 			{
 
 				Tile->ApplyDataFromID(ForestTileID);
+				TileManager->ForestTiles.Add(Tile);
 			}
 		}
 	}

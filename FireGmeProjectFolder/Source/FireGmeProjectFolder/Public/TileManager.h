@@ -26,6 +26,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
 	TArray<ATile*> RegisteredTiles;
 
+	// All Residential Tiles currently on the board
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
+	TArray<ATile*> ResidentialTiles;
+
+	// All Forest Tiles currently on the board
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
+	TArray<ATile*> ForestTiles;
+
 	UPROPERTY(EditAnywhere, Category = "Tiles")
 	TSubclassOf<ATile> TileClass;
 
@@ -35,7 +43,7 @@ public:
 
 	// Community health from 0-100
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game")
-	int32 CommunityHealth = 10;
+	int32 CommunityHealth = 100;
 
 	// Tile ID to assign when a tile becomes charred
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
@@ -64,6 +72,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Tiles")
 	void UnregisterTile(ATile* Tile);
+
+	UFUNCTION(BlueprintCallable, Category = "Tiles")
+	ATile* FindSafeTileToBurn(int32 MinimumDistance);
 
 	UFUNCTION(BlueprintCallable, Category = "Fire")
 	void UpdateFirePreview(); // Marks bWillIgniteNextTurn based on current burning tiles, without advancing fire.

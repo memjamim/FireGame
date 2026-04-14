@@ -36,10 +36,17 @@ void ATileManager::BeginPlay()
 		/* NOTE FOR KYLE: We eventually want the fire to start not at a random index, but at a random Forest tile.
 		   Furthermore, we want the fire to start somewhat away from Residential tiles (and others of the sorts) so
 		   as to provide the player a fair opportunity to get setup. */
-		ATile* StartTile = RegisteredTiles[RandomIndex]; 
+		ATile* StartTile = FindSafeTileToBurn(4); // Gets a random Tile that is far enough away from Residential Tiles (and that starts on a Forest Tile).
 
 		IgniteTile(StartTile);
+		if (!IsValid(StartTile))
+		{
+			UE_LOG(LogTemp, Error, TEXT("Returned StartTile is invalid."));
+			return;
+		}
 
+		UE_LOG(LogTemp, Error, TEXT("Received StartTile: %s"),
+			*StartTile->GetName());
 		UE_LOG(LogTemp, Warning, TEXT("Initial fire started at (%d, %d, %d)"),
 			StartTile->GridCoordinates.X,
 			StartTile->GridCoordinates.Y,
@@ -81,6 +88,12 @@ void ATileManager::RegisterTile(ATile* Tile)
 
 	RegisteredTiles.Add(Tile);
 	TileLookup.Add(Tile->GridCoordinates, Tile);
+	//if (Tile->TileID == 0) { // If this Tile is a Forest, add it to the appropriate array.
+	//	ForestTiles.Add(Tile);
+	//}
+	//else if (Tile->TileID == 4) { // If this Tile is a Residential, add it to the appropriate array.
+	//	ResidentialTiles.Add(Tile);
+	//}
 
 	UE_LOG(LogTemp, Verbose, TEXT("Registered tile ID %d at (%d, %d, %d)"),
 		Tile->TileID,
@@ -494,4 +507,54 @@ void ATileManager::UpdateFirePreview()
 			T->UpdateTileVisuals();
 		}
 	}
+}
+
+ATile* ATileManager::FindSafeTileToBurn(int32 MinimumDistance)
+{
+	TArray<ATile*> ValidForestTiles;
+
+	UE_LOG(LogTemp, Warning, TEXT("Really Obscure Message 1"));
+
+	for (ATile* ForestTile : ForestTiles) // Loop through all Forest tiles.
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Really Obscure Message 2"));
+		if (!IsValid(ForestTile)) continue;
+
+		bool farEnoughAway = true;
+
+		for (ATile* ResidentialTile : ResidentialTiles)
+		{
+			if (!IsValid(ResidentialTile)) continue;
+
+			// Get the distance between the Tiles.
+			int32 Distance = AUnit::GetCubeDistance(ForestTile->GridCoordinates, ResidentialTile->GridCoordinates);
+
+			if (Distance < MinimumDistance)
+			{
+				farEnoughAway = false;
+				break;
+			}
+			UE_LOG(LogTemp, Error, TEXT("Forest tile (%d,%d,%d) closest house = %d"),
+				ForestTile->GridCoordinates.X,
+				ForestTile->GridCoordinates.Y,
+				ForestTile->GridCoordinates.Z,
+				Distance);
+		}
+
+		if (farEnoughAway)
+		{
+			ValidForestTiles.Add(ForestTile);
+		}
+		UE_LOG(LogTemp, Warning, TEXT("ForestTiles: %d | ResidentialTiles: %d"),
+			ForestTiles.Num(),
+			ResidentialTiles.Num());
+	}
+
+	if (ValidForestTiles.Num() == 0) // If not Forest Tiles are far enough away (which would hopefully never happen).
+	{
+		return nullptr;
+	}
+
+	int32 RandIndex = FMath::RandRange(0, ValidForestTiles.Num() - 1); // Get a random Tile's index and return that Tile to start the fire at.
+	return ValidForestTiles[RandIndex];
 }
