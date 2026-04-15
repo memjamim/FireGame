@@ -48,6 +48,17 @@ struct FIREGMEPROJECTFOLDER_API FUnitData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
 	int32 Turns_To_Deploy = 0;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
+	FString AbilityDescription;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
+	FString SpecialDescription;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
+	TSoftObjectPtr<UTexture2D> Icon;
+
+
+
 	/** Blueprint class to spawn for this unit type (Helicopter, Residential FF, Wildland FF). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit Data")
 	TSubclassOf<AUnit> Unit_BP;

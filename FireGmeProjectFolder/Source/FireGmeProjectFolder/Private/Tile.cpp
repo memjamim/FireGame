@@ -5,6 +5,7 @@
 ATile::ATile()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bIsSelected = false;
 
 	TileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TileMesh"));
 	RootComponent = TileMesh;
@@ -30,6 +31,27 @@ ATile::ATile()
 	}
 }
 
+void ATile::Select()
+{
+	bIsSelected = true;
+	OnSelected();
+}
+
+void ATile::Deselect()
+{
+	bIsSelected = false;
+	OnDeselected();
+}
+
+void ATile::OnSelected_Implementation()
+{
+	// Override in Blueprint — highlight unit, show movement range, etc.
+}
+
+void ATile::OnDeselected_Implementation()
+{
+	// Override in Blueprint — remove visual feedback
+}
 
 // Called when the game starts or when spawned
 void ATile::BeginPlay()
@@ -88,6 +110,18 @@ void ATile::SetAlertIndicatorVisible(bool bVisible)
 bool ATile::IsAlertIndicatorVisible() const
 {
 	return AlertIndicator && AlertIndicator->IsVisible();
+
+void ATile::ReduceCommunityHealthCost()
+{
+	if (CommunityHealthCost > 2) {
+		CommunityHealthCost--;
+		UE_LOG(LogTemp, Log, TEXT("New Community Health Cost: %d"), CommunityHealthCost);
+	}
+}
+
+int32 ATile::GetTileID()
+{
+	return TileID;
 }
 
 bool ATile::ApplyDataFromRowName(FName RowName)

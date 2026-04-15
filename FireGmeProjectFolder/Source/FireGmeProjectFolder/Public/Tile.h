@@ -114,6 +114,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tile|Data")
 	bool ApplyDataFromRowName(FName RowName);
 
+	UFUNCTION(BlueprintCallable, Category = "Tile|Data")
+	void ReduceCommunityHealthCost();
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Data")
+	int32 GetTileID();
+
 	// Called by C++; actual implementation is in BP_Tile
 	UFUNCTION(BlueprintNativeEvent, Category = "Tile|Grid")
 	FIntVector ConvertWorldToGridCoordinates(const FVector& WorldLocation) const;
@@ -129,4 +135,23 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Tile|Grid")
 	void SyncWorldFromGrid();
+
+	// Copied select-functionality from unit
+
+	UPROPERTY(BlueprintReadWrite, Category = "Tile|Selection")
+	bool bIsSelected = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Selection")
+	void Select();
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Selection")
+	void Deselect();
+
+	/** Override in Blueprint for visual feedback. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Tile|Selection")
+	void OnSelected();
+
+	/** Override in Blueprint to remove visual feedback. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Tile|Selection")
+	void OnDeselected();
 };

@@ -26,6 +26,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
 	TArray<ATile*> RegisteredTiles;
 
+	// All Residential Tiles currently on the board
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
+	TArray<ATile*> ResidentialTiles;
+
+	// All Forest Tiles currently on the board
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
+	TArray<ATile*> ForestTiles;
+
 	UPROPERTY(EditAnywhere, Category = "Tiles")
 	TSubclassOf<ATile> TileClass;
 
@@ -52,9 +60,9 @@ public:
 	AGameManager* GameManager = nullptr;
 
 	// Chance for NON-wind neighbors to ignite: Numerator / Denominator
-	// Currently 3/6 = 50% each of the 5 non-wind direction neighbors.
+	// Currently 2/6 = 33% each of the 5 non-wind direction neighbors.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire|Spread")
-	int32 NonWindSpreadNumerator = 3;
+	int32 NonWindSpreadNumerator = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire|Spread")
 	int32 NonWindSpreadDenominator = 6;
@@ -64,6 +72,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Tiles")
 	void UnregisterTile(ATile* Tile);
+
+	UFUNCTION(BlueprintCallable, Category = "Tiles")
+	ATile* FindSafeTileToBurn(int32 MinimumDistance);
 
 	UFUNCTION(BlueprintCallable, Category = "Fire")
 	void UpdateFirePreview(); // Marks bWillIgniteNextTurn based on current burning tiles, without advancing fire.

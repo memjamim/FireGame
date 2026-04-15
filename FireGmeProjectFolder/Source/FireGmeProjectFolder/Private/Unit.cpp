@@ -1,5 +1,6 @@
 #include "Unit.h"
 #include "Tile.h"
+#include "AudioManager.h"
 #include "TileManager.h"
 #include "GameManager.h"
 #include "GameManager.h"
@@ -20,6 +21,7 @@ AUnit::AUnit()
 	CurrentTile = nullptr;
 	TileManager = nullptr;
 	GameManager = nullptr;
+	AudioManager = nullptr;
 
 	GridCoordinates = FIntVector::ZeroValue;
 	bIsSelected = false;
@@ -39,6 +41,7 @@ void AUnit::BeginPlay()
 	// Cache the TileManager reference
 	TileManager = FindTileManager();
 	GameManager = FindGameManager();
+	AudioManager = FindAudioManager();
 	
 
 	if (!TileManager)
@@ -84,6 +87,16 @@ void AUnit::BeginPlay()
 				*GetName(),
 				GridCoordinates.X, GridCoordinates.Y, GridCoordinates.Z);
 		}
+	}
+	if (!GameManager)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s: No AGameManager found in the level."), *GetName());
+		return;
+	}
+	else
+	{
+		GameManager->RegisterUnit(this);
+		UE_LOG(LogTemp, Log, TEXT("%s registered with GameManager."), *GetName());
 	}
 
 }
@@ -211,6 +224,7 @@ bool AUnit::MoveToTile(FIntVector TargetCoordinates)
 		return false;
 	}
 
+	AudioManager->PlayUnitTranslatingSound(this); // Play the translating sound for this Unit.
 	StartTranslationToTile(TargetTile);
 	return true;
 }
@@ -301,6 +315,7 @@ void AUnit::UpdateTranslation(float DeltaTime)
 
 		SetCurrentTile(ReachedTile);
 		bHasMovedThisTurn = true;
+		AudioManager->PlayUnitSettlingSound(this); // Play the settling sound for this Unit.
 		OnMoveComplete();
 	}
 }
@@ -447,6 +462,12 @@ void AUnit::ExecuteSpecial_Implementation(const TArray<ATile*>& TargetTiles, int
 	bHasUsedSpecialThisTurn = true;
 }
 
+void AUnit::EvacuateResidents_Implementation()
+{
+	// Reduce the current standing tile's CommunityHealthCost by one.
+	CurrentTile->ReduceCommunityHealthCost();
+}
+
 void AUnit::ConsumeStamina(int32 Amount)
 {
 	CurrentStamina = FMath::Max(CurrentStamina - Amount, 0);
@@ -496,6 +517,19 @@ AGameManager* AUnit::FindGameManager() const
 	if (Found.Num() > 0)
 	{
 		return Cast<AGameManager>(Found[0]);
+	}
+
+	return nullptr;
+}
+
+AAudioManager* AUnit::FindAudioManager() const
+{
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAudioManager::StaticClass(), Found);
+
+	if (Found.Num() > 0)
+	{
+		return Cast<AAudioManager>(Found[0]);
 	}
 
 	return nullptr;

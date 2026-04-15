@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Unit.h"
+#include "AudioManager.h"
 #include "GameFramework/Actor.h"
 #include "Engine/DataTable.h"
 #include "GameManager.generated.h"
@@ -68,6 +70,10 @@ protected:
 
 	void CacheAlertManager();
 
+	// Reference to audio manager
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Managers")
+	AAudioManager* AudioManager = nullptr;
+
 public:
 	virtual void Tick(float DeltaTime) override;
 
@@ -96,6 +102,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnActionPointsChanged OnActionPointsChanged;
+
+	// An array of all Units on the map at a given time.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Units")
+	TArray<AUnit*> UnitsInPlay;
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnTurnStarted OnTurnStarted;
@@ -143,6 +153,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Turns")
 	void DoRandomEvent();
 
+	UFUNCTION(BlueprintCallable, Category = "Units")
+	void RegisterUnit(AUnit* UnitToRegister);
+
+	UFUNCTION(BlueprintCallable, Category = "Units")
+	void UnregisterUnit(AUnit* UnitToDeregister);
 	// Deplyment Queue
 
 	// Blueprint-readable so UI can show arrives in X turns
