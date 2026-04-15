@@ -114,3 +114,14 @@ void AAudioManager::PlayFireSpreadingSound()
 		}
 	}
 }
+
+// Function that plays the wind direction changing sound.
+void AAudioManager::PlayWindDirectionChangeSound()
+{
+	if (WindDirectionChangeSound)
+	{
+		if (WindDirectionChangeSound->CurrentPlayCount.Num() != 1) {
+			UGameplayStatics::PlaySound2D(this, WindDirectionChangeSound); // Non-spatial sounds. Use for buttons and UI clicks.
+		}
+	}
+}

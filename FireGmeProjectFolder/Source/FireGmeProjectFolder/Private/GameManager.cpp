@@ -122,6 +122,7 @@ void AGameManager::SetWindDirection(int32 NewWindDirection)
 {
 	// Keep it 0..5
 	WindDirection = ((NewWindDirection % 6) + 6) % 6;
+	AudioManager->PlayWindDirectionChangeSound();
 }
 
 void AGameManager::AdvanceTurnCounter()
