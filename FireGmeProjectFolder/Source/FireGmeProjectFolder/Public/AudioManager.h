@@ -93,6 +93,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	class USoundBase* FireSpreadingSound;
 
+	// The .wav file for the wind direction change sound effect.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* WindDirectionChangeSound;
+
 	// A function used to play the End Turn button sound effect.
 	UFUNCTION(BlueprintCallable, Category = "Audio")
 	void PlayEndTurnButtonSound();
@@ -108,4 +112,8 @@ public:
 	// A function used to play the sounds for when fire spreads to a new Tile.
 	UFUNCTION(BlueprintCallable, Category = "Audio")
 	void PlayFireSpreadingSound();
+
+	// A function used to play the sounds for when the wind direction changes.
+	UFUNCTION(BlueprintCallable, Category = "Audio")
+	void PlayWindDirectionChangeSound();
 };
