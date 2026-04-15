@@ -6,6 +6,7 @@
 #include "Unit.h"
 #include "Tile.h"
 #include "AudioManager.h"
+#include "AlertManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "UnitDataRow.h"
 
@@ -63,8 +64,10 @@ void AGameManager::BeginPlay()
 	}
 
 	// Optionally start turn 1 immediately (so UI can show "Turn 1" at game start)
+	CacheAlertManager();
 	StartPlayerTurn();
 }
+
 
 void AGameManager::Tick(float DeltaTime)
 {
@@ -89,6 +92,21 @@ AGameManager* AGameManager::GetGameManager(const UObject* WorldContextObject)
 	return (Found.Num() > 0) ? Cast<AGameManager>(Found[0]) : nullptr;
 }
 
+void AGameManager::CacheAlertManager()
+{
+	if (AlertManager)
+	{
+		return;
+	}
+
+	TArray<AActor*> FoundAlertManagers;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAlertManager::StaticClass(), FoundAlertManagers);
+	if (FoundAlertManagers.Num() > 0)
+	{
+		AlertManager = Cast<AAlertManager>(FoundAlertManagers[0]);
+	}
+}
+
 void AGameManager::SetActionPoints(int32 NewActionPoints)
 {
 	ActionPoints = NewActionPoints;
@@ -99,6 +117,23 @@ void AGameManager::AddActionPoints(int32 Delta)
 {
 	ActionPoints += Delta;
 	OnActionPointsChanged.Broadcast(ActionPoints);
+}
+
+void AGameManager::ApplyActionPointsPerTurnModifier(int32 ModifierDelta, int32 DurationTurns)
+{
+	if (ModifierDelta == 0 || DurationTurns <= 0)
+	{
+		return;
+	}
+
+	ActionPointsPerTurnModifier += ModifierDelta;
+	ActionPointsPerTurnModifierTurnsRemaining = FMath::Max(ActionPointsPerTurnModifierTurnsRemaining, DurationTurns);
+
+	UE_LOG(LogTemp, Log, TEXT("Applied AP-per-turn modifier %+d for %d turns. Current modifier=%+d, TurnsRemaining=%d"),
+		ModifierDelta,
+		DurationTurns,
+		ActionPointsPerTurnModifier,
+		ActionPointsPerTurnModifierTurnsRemaining);
 }
 
 bool AGameManager::TrySpendActionPoints(int32 Cost)
@@ -211,10 +246,21 @@ void AGameManager::StartPlayerTurn()
 
 	const int EligibleInterestAP = FMath::Min(ActionPoints, INTEREST_CAP);
 	const int InterestBonus = (EligibleInterestAP / INTEREST_RATE);
-	const int AdditionalAP = (AP_PER_ROUND + InterestBonus + LastStandBonus);
+	const int EffectiveAPPerRound = FMath::Max(0, AP_PER_ROUND + ActionPointsPerTurnModifier);
+	const int AdditionalAP = (EffectiveAPPerRound + InterestBonus + LastStandBonus);
 
 	ActionPoints += AdditionalAP;
 	OnActionPointsChanged.Broadcast(ActionPoints);
+
+	if (ActionPointsPerTurnModifierTurnsRemaining > 0)
+	{
+		ActionPointsPerTurnModifierTurnsRemaining -= 1;
+		if (ActionPointsPerTurnModifierTurnsRemaining <= 0)
+		{
+			ActionPointsPerTurnModifier = 0;
+			ActionPointsPerTurnModifierTurnsRemaining = 0;
+		}
+	}
 
 	// REFRESH UNITS
 	TArray<AActor*> FoundUnits;
@@ -231,8 +277,8 @@ void AGameManager::StartPlayerTurn()
 	// PROCESS DEPLOYMENT QUEUE
 	ProcessDeploymentQueue();
 
-	UE_LOG(LogTemp, Log, TEXT("Player turn %d started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d). Total AP: %d"),
-		CurrentTurn, AdditionalAP, AP_PER_ROUND, InterestBonus, LastStandBonus, ActionPoints);
+	UE_LOG(LogTemp, Log, TEXT("Player turn %d started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d, AP/Turn Mod: %+d). Total AP: %d"),
+		CurrentTurn, AdditionalAP, EffectiveAPPerRound, InterestBonus, LastStandBonus, ActionPointsPerTurnModifier, ActionPoints);
 }
 
 void AGameManager::EndPlayerTurn()
@@ -274,6 +320,12 @@ void AGameManager::DoRandomEvent()
 		{
 			WindDirection = rand() % 6;
 		}
+	}
+
+	CacheAlertManager();
+	if (AlertManager)
+	{
+		AlertManager->ProcessTurnStart();
 	}
 
 	// Random events done -> next player turn
