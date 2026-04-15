@@ -37,7 +37,7 @@ struct FIREGMEPROJECTFOLDER_API FAlertOptionData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option", meta = (MultiLine = "true"))
 	FText OptionText;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
@@ -68,16 +68,16 @@ struct FIREGMEPROJECTFOLDER_API FAlertOptionData
 	int32 RequiredWindDirection = -1;
 
 	// Optional UI message when blocked
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement", meta = (MultiLine = "true"))
 	FText UnavailableReasonOverride;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display", meta = (MultiLine = "true"))
 	FText RequirementDescription;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display", meta = (MultiLine = "true"))
 	FText NarrativeOutcome;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display", meta = (MultiLine = "true"))
 	FText RewardDescription;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
@@ -102,10 +102,10 @@ struct FIREGMEPROJECTFOLDER_API FAlertData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
 	FName AlertId = NAME_None;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert", meta = (MultiLine = "true"))
 	FText Title;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert", meta = (MultiLine = "true"))
 	FText Narrative;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|UI")

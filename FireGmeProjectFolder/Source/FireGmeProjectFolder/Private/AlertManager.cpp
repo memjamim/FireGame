@@ -357,10 +357,6 @@ void AAlertManager::ProcessTurnStart()
 		}
 
 		const int32 ExpiredInstanceId = Instance.InstanceId;
-		if (GameManager && ExpiredAlertCityHealthPenalty > 0)
-		{
-			GameManager->CityHealth = FMath::Max(0, GameManager->CityHealth - ExpiredAlertCityHealthPenalty);
-		}
 
 		if (const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context))
 		{
@@ -728,4 +724,16 @@ void AAlertManager::HandleAlertClickFromCursor()
 
 	OnAlertSelected.Broadcast(*AlertInstanceId);
 	OnAlertSelected_BP(*AlertInstanceId);
+}
+
+bool AAlertManager::GetActiveAlertById(int32 AlertInstanceId, FActiveAlertInstance& OutAlertInstance) const
+{
+	const int32 Index = FindActiveAlertIndexById(AlertInstanceId);
+	if (Index == INDEX_NONE)
+	{
+		return false;
+	}
+
+	OutAlertInstance = ActiveAlerts[Index];
+	return true;
 }

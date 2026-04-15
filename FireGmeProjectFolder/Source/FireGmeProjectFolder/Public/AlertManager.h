@@ -108,6 +108,9 @@ public:
 	bool GetAlertDisplayData(int32 AlertInstanceId, FActiveAlertInstance& OutInstance, FAlertData& OutData) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Alert")
+	bool GetActiveAlertById(int32 AlertInstanceId, FActiveAlertInstance& OutAlertInstance) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Alert")
 	bool GetAlertOptionAvailability(int32 AlertInstanceId, TArray<FAlertOptionAvailability>& OutAvailability) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Alert")
