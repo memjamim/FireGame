@@ -77,6 +77,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Rules", meta = (ClampMin = "0"))
 	int32 GuaranteedSpawnEveryNTurns = 4;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Rules", meta = (ClampMin = "0"))
+	int32 ExpiredAlertCityHealthPenalty = 10;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Alert|Runtime")
 	TArray<FActiveAlertInstance> ActiveAlerts;
 
@@ -135,6 +138,9 @@ protected:
 	UPROPERTY()
 	TMap<FIntVector, int32> TileCoordsToAlertId;
 
+	UPROPERTY()
+	bool bWasLeftMouseDownLastTick = false;
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "Alert")
 	void OnAlertSpawned_BP(const FActiveAlertInstance& AlertInstance, const FAlertData& AlertData);
 
@@ -157,6 +163,7 @@ private:
 	bool EvaluateOptionRequirements(const FActiveAlertInstance& Instance, const FAlertOptionData& OptionData, FText& OutFailureReason) const;
 
 	bool ApplyOptionEffect(const FActiveAlertInstance& Instance, const FAlertOptionData& OptionData);
+	bool ApplyTemporaryActionPointIncomeEffect(const FAlertOptionData& OptionData);
 	bool TryApplyActionPointCost(int32 ActionPointCost);
 
 	int32 FindActiveAlertIndexById(int32 AlertInstanceId) const;

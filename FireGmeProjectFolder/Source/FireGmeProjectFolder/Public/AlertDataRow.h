@@ -10,6 +10,8 @@ enum class EAlertEffectType : uint8
 	None = 0,
 	AddActionPoints,
 	RemoveActionPoints,
+	AddActionPointsPerTurnTemporary,
+	RemoveActionPointsPerTurnTemporary,
 	AddCityHealth,
 	RemoveCityHealth,
 	ChangeWindDirection,
@@ -41,6 +43,9 @@ struct FIREGMEPROJECTFOLDER_API FAlertOptionData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
 	int32 ActionPointCost = 0;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display")
+	bool bNegativeOutcome = false;
+
 	// Existing requirement
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
 	FAlertUnitRequirement UnitRequirement;
@@ -66,11 +71,24 @@ struct FIREGMEPROJECTFOLDER_API FAlertOptionData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Requirement")
 	FText UnavailableReasonOverride;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display")
+	FText RequirementDescription;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display")
+	FText NarrativeOutcome;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option|Display")
+	FText RewardDescription;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
 	EAlertEffectType EffectType = EAlertEffectType::None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
 	int32 EffectMagnitude = 0;
+
+	// Used by temporary effects (for example AP-per-turn modifiers)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
+	int32 EffectDurationTurns = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Option")
 	FName EffectPayload = NAME_None;

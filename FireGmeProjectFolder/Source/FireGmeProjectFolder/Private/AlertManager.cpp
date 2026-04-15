@@ -357,6 +357,11 @@ void AAlertManager::ProcessTurnStart()
 		}
 
 		const int32 ExpiredInstanceId = Instance.InstanceId;
+		if (GameManager && ExpiredAlertCityHealthPenalty > 0)
+		{
+			GameManager->CityHealth = FMath::Max(0, GameManager->CityHealth - ExpiredAlertCityHealthPenalty);
+		}
+
 		if (const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context))
 		{
 			OnAlertExpired_BP(Instance, *Data);
@@ -524,6 +529,10 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 	case EAlertEffectType::RemoveActionPoints:
 		return GameManager->TrySpendActionPoints(FMath::Max(0, OptionData.EffectMagnitude));
 
+	case EAlertEffectType::AddActionPointsPerTurnTemporary:
+	case EAlertEffectType::RemoveActionPointsPerTurnTemporary:
+		return ApplyTemporaryActionPointIncomeEffect(OptionData);
+
 	case EAlertEffectType::AddCityHealth:
 		GameManager->CityHealth += FMath::Max(0, OptionData.EffectMagnitude);
 		return true;
@@ -560,6 +569,33 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 	default:
 		return false;
 	}
+}
+
+bool AAlertManager::ApplyTemporaryActionPointIncomeEffect(const FAlertOptionData& OptionData)
+{
+	if (!GameManager)
+	{
+		return false;
+	}
+
+	const int32 DurationTurns = FMath::Max(0, OptionData.EffectDurationTurns);
+	if (DurationTurns <= 0)
+	{
+		return false;
+	}
+
+	const int32 Magnitude = FMath::Max(0, OptionData.EffectMagnitude);
+	if (Magnitude <= 0)
+	{
+		return false;
+	}
+
+	const int32 SignedModifier = (OptionData.EffectType == EAlertEffectType::RemoveActionPointsPerTurnTemporary)
+		? -Magnitude
+		: Magnitude;
+
+	GameManager->ApplyActionPointsPerTurnModifier(SignedModifier, DurationTurns);
+	return true;
 }
 
 bool AAlertManager::TryApplyActionPointCost(int32 ActionPointCost)
@@ -653,10 +689,19 @@ void AAlertManager::HandleAlertClickFromCursor()
 		return;
 	}
 
-	if (!PlayerController->WasInputKeyJustPressed(EKeys::LeftMouseButton))
+	const bool bIsLeftMouseDown = PlayerController->IsInputKeyDown(EKeys::LeftMouseButton);
+	if (!bIsLeftMouseDown)
+	{
+		bWasLeftMouseDownLastTick = false;
+		return;
+	}
+
+	if (bWasLeftMouseDownLastTick)
 	{
 		return;
 	}
+
+	bWasLeftMouseDownLastTick = true;
 
 	FHitResult Hit;
 	if (!PlayerController->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
@@ -680,7 +725,6 @@ void AAlertManager::HandleAlertClickFromCursor()
 	{
 		return;
 	}
-
 
 	OnAlertSelected.Broadcast(*AlertInstanceId);
 	OnAlertSelected_BP(*AlertInstanceId);

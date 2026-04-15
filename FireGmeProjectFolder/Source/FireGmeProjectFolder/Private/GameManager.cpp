@@ -111,6 +111,23 @@ void AGameManager::AddActionPoints(int32 Delta)
 	OnActionPointsChanged.Broadcast(ActionPoints);
 }
 
+void AGameManager::ApplyActionPointsPerTurnModifier(int32 ModifierDelta, int32 DurationTurns)
+{
+	if (ModifierDelta == 0 || DurationTurns <= 0)
+	{
+		return;
+	}
+
+	ActionPointsPerTurnModifier += ModifierDelta;
+	ActionPointsPerTurnModifierTurnsRemaining = FMath::Max(ActionPointsPerTurnModifierTurnsRemaining, DurationTurns);
+
+	UE_LOG(LogTemp, Log, TEXT("Applied AP-per-turn modifier %+d for %d turns. Current modifier=%+d, TurnsRemaining=%d"),
+		ModifierDelta,
+		DurationTurns,
+		ActionPointsPerTurnModifier,
+		ActionPointsPerTurnModifierTurnsRemaining);
+}
+
 bool AGameManager::TrySpendActionPoints(int32 Cost)
 {
 	if (Cost <= 0)
@@ -202,10 +219,21 @@ void AGameManager::StartPlayerTurn()
 
 	const int EligibleInterestAP = FMath::Min(ActionPoints, INTEREST_CAP);
 	const int InterestBonus = (EligibleInterestAP / INTEREST_RATE);
-	const int AdditionalAP = (AP_PER_ROUND + InterestBonus + LastStandBonus);
+	const int EffectiveAPPerRound = FMath::Max(0, AP_PER_ROUND + ActionPointsPerTurnModifier);
+	const int AdditionalAP = (EffectiveAPPerRound + InterestBonus + LastStandBonus);
 
 	ActionPoints += AdditionalAP;
 	OnActionPointsChanged.Broadcast(ActionPoints);
+
+	if (ActionPointsPerTurnModifierTurnsRemaining > 0)
+	{
+		ActionPointsPerTurnModifierTurnsRemaining -= 1;
+		if (ActionPointsPerTurnModifierTurnsRemaining <= 0)
+		{
+			ActionPointsPerTurnModifier = 0;
+			ActionPointsPerTurnModifierTurnsRemaining = 0;
+		}
+	}
 
 	// REFRESH UNITS
 	TArray<AActor*> FoundUnits;
@@ -222,8 +250,8 @@ void AGameManager::StartPlayerTurn()
 	// PROCESS DEPLOYMENT QUEUE
 	ProcessDeploymentQueue();
 
-	UE_LOG(LogTemp, Log, TEXT("Player turn %d started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d). Total AP: %d"),
-		CurrentTurn, AdditionalAP, AP_PER_ROUND, InterestBonus, LastStandBonus, ActionPoints);
+	UE_LOG(LogTemp, Log, TEXT("Player turn %d started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d, AP/Turn Mod: %+d). Total AP: %d"),
+		CurrentTurn, AdditionalAP, EffectiveAPPerRound, InterestBonus, LastStandBonus, ActionPointsPerTurnModifier, ActionPoints);
 }
 
 void AGameManager::EndPlayerTurn()
