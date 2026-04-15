@@ -9,6 +9,7 @@
 
 class ATileManager;
 class AUnit;
+class AAlertManager;
 
 // Turn State
 UENUM(BlueprintType)
@@ -65,6 +66,9 @@ protected:
 	// Reference to tile manager
 	UPROPERTY()
 	ATileManager* TileManager = nullptr;
+	AAlertManager* AlertManager = nullptr;
+
+	void CacheAlertManager();
 
 	// Reference to audio manager
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Managers")
@@ -116,7 +120,16 @@ public:
 	void AddActionPoints(int32 Delta);
 
 	UFUNCTION(BlueprintCallable, Category = "Turns")
+	void ApplyActionPointsPerTurnModifier(int32 ModifierDelta, int32 DurationTurns);
+
+	UFUNCTION(BlueprintCallable, Category = "Turns")
 	bool TrySpendActionPoints(int32 Cost);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Turns")
+	int32 ActionPointsPerTurnModifier = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Turns")
+	int32 ActionPointsPerTurnModifierTurnsRemaining = 0;
 
 	UFUNCTION(BlueprintCallable, Category = "Wind")
 	void SetWindDirection(int32 NewWindDirection);
