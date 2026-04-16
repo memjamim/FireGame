@@ -9,12 +9,62 @@ AAudioManager::AAudioManager()
 {
 	PrimaryActorTick.bCanEverTick = false; // We have no need for ticks with music. Well, for now at least.
 
-	// Creation of the audio component that will be used to play sound.
-	MusicComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("MusicComponent"));
-	RootComponent = MusicComponent;
+	// Creation of the audio components that will be used to play sound. Start with the scene as the root and the rest are the children.
+	AudioSceneRootComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioSceneRootComponent"));
+	RootComponent = AudioSceneRootComponent;
+	AudioSceneRootComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 
-	// Don't play any sounds until we desire.
-	MusicComponent->bAutoActivate = false;
+	BackgroundMusicComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("BackgroundMusicComponent"));
+	BackgroundMusicComponent->SetupAttachment(AudioSceneRootComponent);
+	BackgroundMusicComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	EndTurnButtonSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("EndTurnButtonSoundComponent"));
+	EndTurnButtonSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	EndTurnButtonSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	HelicopterTranslatingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("HelicopterTranslatingSoundComponent"));
+	HelicopterTranslatingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	HelicopterTranslatingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	ResidentialFFTranslatingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("ResidentialFFTranslatingSoundComponent"));
+	ResidentialFFTranslatingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	ResidentialFFTranslatingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	WoodlandFFTranslatingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("WoodlandFFTranslatingSoundComponent"));
+	WoodlandFFTranslatingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	WoodlandFFTranslatingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	GrassSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("GrassSettlingSoundComponent"));
+	GrassSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	GrassSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	ResidentialSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("ResidentialSettlingSoundComponent"));
+	ResidentialSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	ResidentialSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	ForestSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("ForestSettlingSoundComponent"));
+	ForestSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	ForestSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	CharredSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("CharredSettlingSoundComponent"));
+	CharredSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	CharredSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	WaterSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("WaterSettlingSoundComponent"));
+	WaterSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	WaterSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	MountainSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("MountainSettlingSoundComponent"));
+	MountainSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	MountainSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	FireSpreadingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FireSpreadingSoundComponent"));
+	FireSpreadingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	FireSpreadingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	WindDirectionChangeSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("WindDirectionChangeSoundComponent"));
+	WindDirectionChangeSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	WindDirectionChangeSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 }
 
 // On the start of the game function.
@@ -22,10 +72,23 @@ void AAudioManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (MusicComponent && BackgroundMusic)
+	if (AudioSceneRootComponent && BackgroundMusic)
 	{
-		MusicComponent->SetSound(BackgroundMusic);
-		MusicComponent->Play();
+		BackgroundMusicComponent->SetSound(BackgroundMusic);
+		EndTurnButtonSoundComponent->SetSound(EndTurnButtonSound);
+		HelicopterTranslatingSoundComponent->SetSound(HelicopterTranslatingSound);
+		ResidentialFFTranslatingSoundComponent->SetSound(ResidentialFFTranslatingSound);
+		WoodlandFFTranslatingSoundComponent->SetSound(WoodlandFFTranslatingSound);
+		GrassSettlingSoundComponent->SetSound(GrassSettlingSound);
+		ResidentialSettlingSoundComponent->SetSound(ResidentialSettlingSound);
+		ForestSettlingSoundComponent->SetSound(ForestSettlingSound);
+		CharredSettlingSoundComponent->SetSound(CharredSettlingSound);
+		WaterSettlingSoundComponent->SetSound(WaterSettlingSound);
+		MountainSettlingSoundComponent->SetSound(MountainSettlingSound);
+		FireSpreadingSoundComponent->SetSound(FireSpreadingSound);
+		WindDirectionChangeSoundComponent->SetSound(WindDirectionChangeSound);
+		BackgroundMusicComponent->SetVolumeMultiplier(0.5f);
+		BackgroundMusicComponent->Play();
 	}
 }
 
@@ -34,6 +97,7 @@ void AAudioManager::PlayEndTurnButtonSound()
 {
 	if (EndTurnButtonSound)
 	{
+		EndTurnButtonSoundComponent->SetVolumeMultiplier(0.75f);
 		UGameplayStatics::PlaySound2D(this, EndTurnButtonSound); // Non-spatial sounds. Use for buttons and UI clicks.
 	}
 }
@@ -109,8 +173,9 @@ void AAudioManager::PlayFireSpreadingSound()
 {
 	if (FireSpreadingSound)
 	{
-		if (FireSpreadingSound->CurrentPlayCount.Num() != 1) {
-			UGameplayStatics::PlaySound2D(this, FireSpreadingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+		if (!(FireSpreadingSoundComponent->IsPlaying())) {
+			FireSpreadingSoundComponent->SetVolumeMultiplier(0.5f);
+			FireSpreadingSoundComponent->Play();
 		}
 	}
 }
@@ -120,8 +185,9 @@ void AAudioManager::PlayWindDirectionChangeSound()
 {
 	if (WindDirectionChangeSound)
 	{
-		if (WindDirectionChangeSound->CurrentPlayCount.Num() != 1) {
-			UGameplayStatics::PlaySound2D(this, WindDirectionChangeSound); // Non-spatial sounds. Use for buttons and UI clicks.
+		if (!(WindDirectionChangeSoundComponent->IsPlaying())) {
+			WindDirectionChangeSoundComponent->SetVolumeMultiplier(12.0f);
+			WindDirectionChangeSoundComponent->Play();
 		}
 	}
 }
