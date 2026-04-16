@@ -110,6 +110,7 @@ void ATile::SetAlertIndicatorVisible(bool bVisible)
 bool ATile::IsAlertIndicatorVisible() const
 {
 	return AlertIndicator && AlertIndicator->IsVisible();
+}
 
 void ATile::ReduceCommunityHealthCost()
 {
