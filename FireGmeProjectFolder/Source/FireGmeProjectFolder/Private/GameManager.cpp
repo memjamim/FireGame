@@ -90,6 +90,23 @@ AGameManager* AGameManager::GetGameManager(const UObject* WorldContextObject)
 	return (Found.Num() > 0) ? Cast<AGameManager>(Found[0]) : nullptr;
 }
 
+ATileManager* AGameManager::GetTileManager()
+{
+	if (TileManager)
+	{
+		return TileManager;
+	}
+
+	TArray<AActor*> FoundTileManagers;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATileManager::StaticClass(), FoundTileManagers);
+	if (FoundTileManagers.Num() > 0)
+	{
+		TileManager = Cast<ATileManager>(FoundTileManagers[0]);
+	}
+
+	return TileManager;
+}
+
 void AGameManager::CacheAlertManager()
 {
 	if (AlertManager)

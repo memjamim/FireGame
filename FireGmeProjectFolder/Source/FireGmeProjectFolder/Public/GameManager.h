@@ -59,12 +59,13 @@ class FIREGMEPROJECTFOLDER_API AGameManager : public AActor
 public:
 	AGameManager();
 
-protected:
-	virtual void BeginPlay() override;
-
 	// Reference to tile manager
 	UPROPERTY()
 	ATileManager* TileManager = nullptr;
+
+protected:
+	virtual void BeginPlay() override;
+
 
 	AAlertManager* AlertManager = nullptr;
 	void CacheAlertManager();
@@ -78,6 +79,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GameManager", meta = (WorldContext = "WorldContextObject"))
 	static AGameManager* GetGameManager(const UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintCallable, Category = "GameManager")
+	ATileManager* GetTileManager();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 CityHealth;
