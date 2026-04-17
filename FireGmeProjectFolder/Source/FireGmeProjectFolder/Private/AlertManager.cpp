@@ -200,15 +200,21 @@ bool AAlertManager::EvaluateOptionRequirements(const FActiveAlertInstance& Insta
 		return false;
 	}
 
+	if (!TileManager)
+	{
+		OutFailureReason = FText::FromString(TEXT("Tile manager not available."));
+		return false;
+	}
+
 	if (OptionData.ActionPointCost > GameManager->ActionPoints)
 	{
 		OutFailureReason = FText::FromString(TEXT("Not enough Action Points."));
 		return false;
 	}
 
-	if (GameManager->CityHealth < OptionData.MinimumCityHealth || GameManager->CityHealth > OptionData.MaximumCityHealth)
+	if (TileManager->CommunityHealth < OptionData.MinimumCityHealth || TileManager->CommunityHealth > OptionData.MaximumCityHealth)
 	{
-		OutFailureReason = FText::FromString(TEXT("City health requirement not met."));
+		OutFailureReason = FText::FromString(TEXT("Community health requirement not met."));
 		return false;
 	}
 
@@ -525,16 +531,26 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 	case EAlertEffectType::RemoveActionPoints:
 		return GameManager->TrySpendActionPoints(FMath::Max(0, OptionData.EffectMagnitude));
 
-	case EAlertEffectType::AddActionPointsPerTurnTemporary:
-	case EAlertEffectType::RemoveActionPointsPerTurnTemporary:
-		return ApplyTemporaryActionPointIncomeEffect(OptionData);
-
 	case EAlertEffectType::AddCityHealth:
-		GameManager->CityHealth += FMath::Max(0, OptionData.EffectMagnitude);
+		if (!TileManager)
+		{
+			return false;
+		}
+		TileManager->CommunityHealth = FMath::Clamp(
+			TileManager->CommunityHealth + FMath::Max(0, OptionData.EffectMagnitude),
+			0,
+			100);
 		return true;
 
 	case EAlertEffectType::RemoveCityHealth:
-		GameManager->CityHealth = FMath::Max(0, GameManager->CityHealth - FMath::Max(0, OptionData.EffectMagnitude));
+		if (!TileManager)
+		{
+			return false;
+		}
+		TileManager->CommunityHealth = FMath::Clamp(
+			TileManager->CommunityHealth - FMath::Max(0, OptionData.EffectMagnitude),
+			0,
+			100);
 		return true;
 
 	case EAlertEffectType::ChangeWindDirection:
@@ -566,7 +582,6 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 		return false;
 	}
 }
-
 bool AAlertManager::ApplyTemporaryActionPointIncomeEffect(const FAlertOptionData& OptionData)
 {
 	if (!GameManager)
