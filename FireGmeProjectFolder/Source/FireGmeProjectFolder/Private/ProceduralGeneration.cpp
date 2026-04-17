@@ -3,6 +3,39 @@
 #include "TileManager.h"
 #include "Engine/World.h"
 
+// Helper function that creates a cluster for Mountain Tiles.
+static void GrowStrip(const TArray<FIntVector>& Directions, const TSet<FIntVector>& AvailableTiles, TSet<FIntVector>& OutStrip,
+					const FIntVector& Start, int32 TargetLength)
+{
+	FIntVector CurrentLocation = Start;
+
+	// Choose a random initial direction between the six we are provided.
+	FIntVector Direction = Directions[FMath::RandRange(0, Directions.Num() - 1)];
+
+	OutStrip.Add(CurrentLocation);
+
+	// Continue to add Mountain Tiles to the desired path until we reach the desired length of this strip.
+	for (int32 i = 1; i < TargetLength; i++)
+	{
+		// Apply a small chance to move the strip in a new direction. Lower means straighter strips, higher results in more random directions.
+		if (FMath::FRand() < 0.25f)
+		{
+			Direction = Directions[FMath::RandRange(0, Directions.Num() - 1)];
+		}
+
+		FIntVector NextTile = CurrentLocation + Direction;
+
+		// If we find an invalid location (edge of the map or so on), we will stop growing.
+		if (!AvailableTiles.Contains(NextTile))
+		{
+			break;
+		}
+
+		OutStrip.Add(NextTile);
+		CurrentLocation = NextTile;
+	}
+}
+
 // Helper function that creates a cluster for Residential Tiles.
 static void GrowCluster(const TArray<FIntVector>& Directions, TSet<FIntVector>& AvailableTiles, TSet<FIntVector>& OutCluster,
 						const FIntVector& Start, int32 TargetSize)
@@ -30,7 +63,8 @@ static void GrowCluster(const TArray<FIntVector>& Directions, TSet<FIntVector>& 
 
 // Procedurally generates a map for the game.
 void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileClass, int32 NumberOfTiles, int32 GrassTileID,
-										int32 ResidentialTileID, int32 ForestTileID, ATileManager* TileManager)
+										int32 ResidentialTileID, int32 ForestTileID, int32 MountainTileID, 
+										ATileManager* TileManager)
 {
 	if (!World || !TileClass)
 	{
@@ -130,29 +164,6 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 	// Converting to an Array allows for us to randomly select Tiles for creating clusters.
 	TArray<FIntVector> TileArray = ChosenTiles.Array();
 
-	// Number of Residential Tile clusters we allow the map to have.
-	int32 ResidentialClusters = 5;
-
-	for (int i = 0; i < ResidentialClusters; i++)
-	{
-		FIntVector Seed = TileArray[FMath::RandRange(0, TileArray.Num() - 1)]; // Choose a random Tile...
-		int32 ClusterSize = FMath::RandRange(2, 7); // ...choose a random size for the Residential cluster...
-
-		TSet<FIntVector> Cluster; // ...create a set for the Residential Tile coordinates...
-
-		GrowCluster(Directions, ChosenTiles, Cluster, Seed, ClusterSize); // ...and grow the Residential cluster using the helper function.
-
-		// Fully applies the Residential Tiles ontop of the Grass Tiles, overwriting them entirely.
-		for (const FIntVector& Coord : Cluster)
-		{
-			if (ATile* Tile = TileManager->TileLookup.FindRef(Coord))
-			{
-				Tile->ApplyDataFromID(ResidentialTileID);
-				TileManager->ResidentialTiles.Add(Tile);
-			}
-		}
-	}
-
 	// Number of Forest Tile clusters we allow the map to have.
 	int32 ForestClusters = 4;
 
@@ -204,6 +215,58 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 
 				Tile->ApplyDataFromID(ForestTileID);
 				TileManager->ForestTiles.Add(Tile);
+			}
+		}
+	}
+
+	// Number of Mountain Tile strips we allow the map to have.
+	int32 MountainStrips = 4;
+
+	for (int i = 0; i < MountainStrips; i++)
+	{
+		FIntVector Seed = TileArray[FMath::RandRange(0, TileArray.Num() - 1)]; // Choose a random Tile...
+
+		int32 MountainStripLength = FMath::RandRange(3, 6); // ...choose a random size for the Mountain strip...
+
+		TSet<FIntVector> MountainStrip;
+
+		GrowStrip(Directions, ChosenTiles, MountainStrip, Seed, MountainStripLength); // ...and grow the Mountain strip using the helper function.
+
+		// Fully applies the Mountain Tiles ontop of the Grass or Forest Tiles, overwriting them entirely.
+		for (const FIntVector& Coordinate : MountainStrip)
+		{
+			if (ATile* Tile = TileManager->TileLookup.FindRef(Coordinate))
+			{
+				if (Tile->TileID == ForestTileID) {
+					TileManager->ForestTiles.Remove(Tile);
+				}
+				Tile->ApplyDataFromID(MountainTileID);
+			}
+		}
+	}
+
+	// Number of Residential Tile clusters we allow the map to have.
+	int32 ResidentialClusters = 5;
+
+	for (int i = 0; i < ResidentialClusters; i++)
+	{
+		FIntVector Seed = TileArray[FMath::RandRange(0, TileArray.Num() - 1)]; // Choose a random Tile...
+		int32 ClusterSize = FMath::RandRange(2, 7); // ...choose a random size for the Residential cluster...
+
+		TSet<FIntVector> Cluster; // ...create a set for the Residential Tile coordinates...
+
+		GrowCluster(Directions, ChosenTiles, Cluster, Seed, ClusterSize); // ...and grow the Residential cluster using the helper function.
+
+		// Fully applies the Residential Tiles ontop of the Grass, Forest, or Mountain Tiles, overwriting them entirely.
+		for (const FIntVector& Coordinate : Cluster)
+		{
+			if (ATile* Tile = TileManager->TileLookup.FindRef(Coordinate))
+			{
+				if (Tile->TileID == ForestTileID) {
+					TileManager->ForestTiles.Remove(Tile);
+				}
+				Tile->ApplyDataFromID(ResidentialTileID);
+				TileManager->ResidentialTiles.Add(Tile);
 			}
 		}
 	}
