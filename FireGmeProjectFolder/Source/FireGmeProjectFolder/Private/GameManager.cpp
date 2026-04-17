@@ -452,7 +452,16 @@ AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
 		return nullptr;
 	}
 
-	const FVector TempLocation(0.f, 0.f, 200.f);
+	FVector TempLocation(0.f, 0.f, 0.f); // THIS is changing unit Z level
+	const FVector AirLocation(0.f, 0.f, 200.f);
+	const FVector GroundLocation(0.f, 0.f, 35.f);
+	if (Deployment.UnitRowName == "HELICOPTER") { // Not probably the best way to do this, but should work
+		TempLocation = AirLocation;
+	}
+	else {
+		TempLocation = GroundLocation;
+	}
+
 	const FTransform SpawnTM(FRotator::ZeroRotator, TempLocation);
 
 	AUnit* NewUnit = GetWorld()->SpawnActor<AUnit>(Row->Unit_BP, SpawnTM);
