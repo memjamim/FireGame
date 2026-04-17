@@ -21,7 +21,6 @@ enum class TBGameState : uint8
 	RANDOM_EVENTS = 3
 };
 
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionPointsChanged, int32, NewActionPoints);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTurnStarted, int32, NewTurnNumber);
 
@@ -66,8 +65,8 @@ protected:
 	// Reference to tile manager
 	UPROPERTY()
 	ATileManager* TileManager = nullptr;
-	AAlertManager* AlertManager = nullptr;
 
+	AAlertManager* AlertManager = nullptr;
 	void CacheAlertManager();
 
 	// Reference to audio manager
@@ -96,7 +95,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Turns")
 	int32 CurrentTurn;
 
-	// Set this in BP_GameManager / MyGameManager instance
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Units")
 	UDataTable* UnitDataTable = nullptr;
 
@@ -158,7 +156,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Units")
 	void UnregisterUnit(AUnit* UnitToDeregister);
-	// Deplyment Queue
 
 	// Blueprint-readable so UI can show arrives in X turns
 	UPROPERTY(BlueprintReadOnly, Category = "Deployments")
@@ -189,16 +186,12 @@ protected:
 
 	/**
 	 * Blueprint hook called when a unit is queued
-	 * (Place to refresh shop UI, play SFX...)
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Deployments")
-	void OnUnitQueued_BP(const FPendingUnitDeployment& Deployment);
+	void OnUnitQueued_BP(FPendingUnitDeployment Deployment);
 
 	/**
-	 * Blueprint hook called after a unit is deployed (spawned, applied row, snapped to tile).
-	 * This is where you can:
-	 * Get PlayerController 0 -> Cast BP_CameraController -> Add to SpawnedUnits array
-	 * Print confirmation strings
+	 * Blueprint hook called after a unit is deployed.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Deployments")
 	void OnUnitDeployed_BP(AUnit* NewUnit, FName UnitRowName, FIntVector SpawnCoords);
