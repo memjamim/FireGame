@@ -65,6 +65,10 @@ AAudioManager::AAudioManager()
 	WindDirectionChangeSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("WindDirectionChangeSoundComponent"));
 	WindDirectionChangeSoundComponent->SetupAttachment(AudioSceneRootComponent);
 	WindDirectionChangeSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	AlertNotificationSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("AlertNotificationSoundComponent"));
+	AlertNotificationSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	AlertNotificationSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 }
 
 // On the start of the game function.
@@ -87,6 +91,7 @@ void AAudioManager::BeginPlay()
 		MountainSettlingSoundComponent->SetSound(MountainSettlingSound);
 		FireSpreadingSoundComponent->SetSound(FireSpreadingSound);
 		WindDirectionChangeSoundComponent->SetSound(WindDirectionChangeSound);
+		AlertNotificationSoundComponent->SetSound(AlertNotificationSound);
 		BackgroundMusicComponent->SetVolumeMultiplier(0.5f);
 		BackgroundMusicComponent->Play();
 	}
@@ -188,6 +193,17 @@ void AAudioManager::PlayWindDirectionChangeSound()
 		if (!(WindDirectionChangeSoundComponent->IsPlaying())) {
 			WindDirectionChangeSoundComponent->SetVolumeMultiplier(12.0f);
 			WindDirectionChangeSoundComponent->Play();
+		}
+	}
+}
+
+// Function that plays the Alert notification sound.
+void AAudioManager::PlayAlertNotificationSound()
+{
+	if (AlertNotificationSound)
+	{
+		if (!(AlertNotificationSoundComponent->IsPlaying())) {
+			AlertNotificationSoundComponent->Play();
 		}
 	}
 }

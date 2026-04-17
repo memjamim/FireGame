@@ -8,6 +8,7 @@
 
 class AGameManager;
 class ATileManager;
+class AAudioManager;
 class ATile;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAlertSpawned, int32, AlertInstanceId);
@@ -128,6 +129,9 @@ protected:
 
 	UPROPERTY()
 	ATileManager* TileManager = nullptr;
+
+	UPROPERTY()
+	AAudioManager* AudioManager = nullptr;
 
 	UPROPERTY()
 	int32 NextAlertInstanceId = 1;

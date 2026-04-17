@@ -150,6 +150,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	class USoundBase* WindDirectionChangeSound;
 
+	// Component for audio that will play the music chosen (for the Alert notification system).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* AlertNotificationSoundComponent;
+
+	// The .wav file for the Alert notification system.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* AlertNotificationSound;
+
 	// A function used to play the End Turn button sound effect.
 	UFUNCTION(BlueprintCallable, Category = "Audio")
 	void PlayEndTurnButtonSound();
@@ -169,4 +177,8 @@ public:
 	// A function used to play the sounds for when the wind direction changes.
 	UFUNCTION(BlueprintCallable, Category = "Audio")
 	void PlayWindDirectionChangeSound();
+
+	// A function used to play the sounds for when the Alert notification system goes off.
+	UFUNCTION(BlueprintCallable, Category = "Audio")
+	void PlayAlertNotificationSound();
 };
