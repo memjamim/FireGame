@@ -37,6 +37,12 @@ struct FIREGMEPROJECTFOLDER_API FTileDataRow : public FTableRowBase
 	FString Description;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString DisplayName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile Data")
+	TSoftObjectPtr<UTexture2D> Icon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<TObjectPtr<UStaticMesh>> Models;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -47,6 +53,7 @@ struct FIREGMEPROJECTFOLDER_API FTileDataRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<UMaterialInterface> BurningMaterial = nullptr;
+
 
 	// fallback if no meshes exist in table
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
