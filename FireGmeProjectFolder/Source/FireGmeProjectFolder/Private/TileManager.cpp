@@ -28,7 +28,7 @@ void ATileManager::BeginPlay()
 	//	}
 	//}
 
-	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, this); // Generates the map procedurally.
+	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, 5, this); // Generates the map procedurally.
 
 	if (RegisteredTiles.Num() > 0)
 	{
@@ -565,8 +565,15 @@ ATile* ATileManager::FindSafeTileToBurn(int32 MinimumDistance)
 			ResidentialTiles.Num());
 	}
 
-	if (ValidForestTiles.Num() == 0) // If not Forest Tiles are far enough away (which would hopefully never happen).
+	if (ValidForestTiles.Num() == 0) // If not Forest Tiles are far enough away (which would hopefully never happen)...
 	{
+		// ...buuut in case it does happen, we choose any random Forest Tile, regardless of distance.
+		if (ForestTiles.Num() > 0)
+		{
+			int32 RandomIndex = FMath::RandRange(0, ForestTiles.Num() - 1);
+			return ForestTiles[RandomIndex];
+		}
+
 		return nullptr;
 	}
 

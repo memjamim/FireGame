@@ -3,6 +3,7 @@
 #include "GameManager.h"
 #include "Tile.h"
 #include "TileManager.h"
+#include "AudioManager.h"
 #include "Unit.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
@@ -50,6 +51,16 @@ bool AAlertManager::CacheManagerReferences()
 		if (FoundTileManagers.Num() > 0)
 		{
 			TileManager = Cast<ATileManager>(FoundTileManagers[0]);
+		}
+	}
+
+	if (!AudioManager)
+	{
+		TArray<AActor*> FoundAudioManagers;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAudioManager::StaticClass(), FoundAudioManagers);
+		if (FoundAudioManagers.Num() > 0)
+		{
+			AudioManager = Cast<AAudioManager>(FoundAudioManagers[0]);
 		}
 	}
 
@@ -182,6 +193,8 @@ bool AAlertManager::TrySpawnRandomAlert()
 
 	OnAlertSpawned.Broadcast(NewInstance.InstanceId);
 	OnAlertSpawned_BP(NewInstance, *ChosenCandidate->Data);
+
+	AudioManager->PlayAlertNotificationSound();
 
 	UE_LOG(LogTemp, Log, TEXT("Alert spawned. InstanceId=%d Row=%s Tile=(%d,%d,%d) TurnsRemaining=%d"),
 		NewInstance.InstanceId,

@@ -63,11 +63,9 @@ void AGameManager::BeginPlay()
 		}
 	}
 
-	// Optionally start turn 1 immediately (so UI can show "Turn 1" at game start)
 	CacheAlertManager();
 	StartPlayerTurn();
 }
-
 
 void AGameManager::Tick(float DeltaTime)
 {
@@ -174,7 +172,11 @@ void AGameManager::SetWindDirection(int32 NewWindDirection)
 {
 	// Keep it 0..5
 	WindDirection = ((NewWindDirection % 6) + 6) % 6;
-	AudioManager->PlayWindDirectionChangeSound();
+
+	if (AudioManager)
+	{
+		AudioManager->PlayWindDirectionChangeSound();
+	}
 }
 
 void AGameManager::AdvanceTurnCounter()
@@ -188,12 +190,6 @@ void AGameManager::EndTurn()
 {
 	UE_LOG(LogTemp, Log, TEXT("Ending Turn: %d"), static_cast<uint8>(CurrentState));
 
-	// Upon the ending of a turn (i.e., when the End Turn button is clicked), play the End Turn button sound.
-	// This calls the Singleton of rhe Audio Manager in order to call the function found within it.
-	/*if (AAudioManager* AM = AAudioManager::Get(GetWorld()))
-	{
-		AM->PlayEndTurnButtonSound();
-	}*/
 	switch (CurrentState)
 	{
 	case TBGameState::PLAYER_TURN:
@@ -201,26 +197,33 @@ void AGameManager::EndTurn()
 		UE_LOG(LogTemp, Log, TEXT("UnitsInPlay array size: %d"), UnitsInPlay.Num());
 		for (AUnit* Unit : UnitsInPlay)
 		{
-			if (!Unit || !Unit->CurrentTile) // Check if both the Unit and the Tile are valid.
+			if (!Unit || !Unit->CurrentTile)
 				continue;
 
-			if (Unit->UnitData.ID != 2) // Check if the Unit is a Residential Firefiter.
+			if (Unit->UnitData.ID != 2)
 				continue;
 
-			if (Unit->CurrentTile->TileID != 4) // Check if the Unit's CurrentTile is a Residential Tile.
+			if (Unit->CurrentTile->TileID != 4)
 				continue;
 
 			UE_LOG(LogTemp, Log, TEXT("Residential Firefighter has reduced health cost of a tile."));
-
 			Unit->EvacuateResidents();
 		}
-		AudioManager->PlayEndTurnButtonSound();
+
+		if (AudioManager)
+		{
+			AudioManager->PlayEndTurnButtonSound();
+		}
+
 		CurrentState = TBGameState::FIRE_TURN;
 		DoFireTurn();
 		break;
 
 	case TBGameState::FIRE_TURN:
-		AudioManager->PlayFireSpreadingSound();
+		if (AudioManager)
+		{
+			AudioManager->PlayFireSpreadingSound();
+		}
 		CurrentState = TBGameState::RANDOM_EVENTS;
 		DoRandomEvent();
 		break;
@@ -269,6 +272,7 @@ void AGameManager::StartPlayerTurn()
 	ActionPoints += AdditionalAP;
 	OnActionPointsChanged.Broadcast(ActionPoints);
 
+	// Handle AP-per-turn modifier duration
 	if (ActionPointsPerTurnModifierTurnsRemaining > 0)
 	{
 		ActionPointsPerTurnModifierTurnsRemaining -= 1;
@@ -358,7 +362,7 @@ void AGameManager::RegisterUnit(AUnit* UnitToRegister)
 	}
 }
 
-// Removes a Unit from the GameManager's array (this likely won't be used, but it may be nice to have).
+// Removes a Unit from the GameManager's array.
 void AGameManager::UnregisterUnit(AUnit* UnitToDeregister)
 {
 	if (UnitToDeregister)
@@ -366,10 +370,14 @@ void AGameManager::UnregisterUnit(AUnit* UnitToDeregister)
 		UnitsInPlay.Remove(UnitToDeregister);
 	}
 }
-// DEPLOYMENT QUEUE
+
+// ===========================
+//       DEPLOYMENT QUEUE
+// ===========================
 
 bool AGameManager::PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoords)
 {
+	UE_LOG(LogTemp, Warning, TEXT("C++ PurchaseAndQueueUnit HIT: %s"), *UnitRowName.ToString());
 	if (!UnitDataTable)
 	{
 		UE_LOG(LogTemp, Error, TEXT("PurchaseAndQueueUnit: UnitDataTable is null on GameManager."));
@@ -400,6 +408,7 @@ bool AGameManager::PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoord
 	PendingDeployments.Add(Deployment);
 
 	OnDeploymentQueueChanged.Broadcast();
+	UE_LOG(LogTemp, Warning, TEXT("About to call OnUnitQueued_BP. PendingDeployments=%d"), PendingDeployments.Num());
 	OnUnitQueued_BP(Deployment);
 
 	UE_LOG(LogTemp, Log, TEXT("Queued unit '%s' at (%d,%d,%d) with TurnsRemaining=%d"),
@@ -460,7 +469,16 @@ AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
 		return nullptr;
 	}
 
-	const FVector TempLocation(0.f, 0.f, 200.f);
+	FVector TempLocation(0.f, 0.f, 0.f); // THIS is changing unit Z level
+	const FVector AirLocation(0.f, 0.f, 200.f);
+	const FVector GroundLocation(0.f, 0.f, 35.f);
+	if (Deployment.UnitRowName == "HELICOPTER") { // Not probably the best way to do this, but should work
+		TempLocation = AirLocation;
+	}
+	else {
+		TempLocation = GroundLocation;
+	}
+
 	const FTransform SpawnTM(FRotator::ZeroRotator, TempLocation);
 
 	AUnit* NewUnit = GetWorld()->SpawnActor<AUnit>(Row->Unit_BP, SpawnTM);
@@ -472,7 +490,7 @@ AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
 	// Apply the DT row
 	NewUnit->ApplyDataFromRowName(Deployment.UnitRowName);
 
-	// Snap to requested hex tile (this also updates GridCoordinates inside SetCurrentTile)
+	// Snap to requested hex tile
 	if (TileManager)
 	{
 		if (ATile* const* FoundTile = TileManager->TileLookup.Find(Deployment.SpawnCoords))
