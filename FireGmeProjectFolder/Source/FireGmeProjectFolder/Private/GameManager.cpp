@@ -172,11 +172,6 @@ void AGameManager::SetWindDirection(int32 NewWindDirection)
 {
 	// Keep it 0..5
 	WindDirection = ((NewWindDirection % 6) + 6) % 6;
-
-	if (AudioManager)
-	{
-		AudioManager->PlayWindDirectionChangeSound();
-	}
 }
 
 void AGameManager::AdvanceTurnCounter()
@@ -340,6 +335,10 @@ void AGameManager::DoRandomEvent()
 		while (WindDirection == Temp)
 		{
 			WindDirection = rand() % 6;
+		}
+		if (AudioManager)
+		{
+			AudioManager->PlayWindDirectionChangeSound();
 		}
 	}
 

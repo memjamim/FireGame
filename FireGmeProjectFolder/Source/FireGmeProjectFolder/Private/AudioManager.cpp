@@ -191,7 +191,7 @@ void AAudioManager::PlayWindDirectionChangeSound()
 	if (WindDirectionChangeSound)
 	{
 		if (!(WindDirectionChangeSoundComponent->IsPlaying())) {
-			WindDirectionChangeSoundComponent->SetVolumeMultiplier(12.0f);
+			WindDirectionChangeSoundComponent->SetVolumeMultiplier(3.0f);
 			WindDirectionChangeSoundComponent->Play();
 		}
 	}
