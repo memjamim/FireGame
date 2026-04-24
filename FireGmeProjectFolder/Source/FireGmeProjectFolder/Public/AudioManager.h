@@ -26,7 +26,8 @@ enum class TileTypes : uint8
 	WATER = 2,
 	CHARRED = 3,
 	RESIDENTIAL = 4,
-	MOUNTAIN = 5
+	MOUNTAIN = 5,
+	COMMUNICATIONSTOWER = 6
 };
 
 UCLASS()
@@ -133,6 +134,14 @@ public:
 	// The .wav file for a Unit moving onto a Mountain Tile sound effect.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	class USoundBase* MountainSettlingSound;
+
+	// Component for audio that will play the music chosen (for the Communications Tower Tile).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* CommunicationsTowerSettlingSoundComponent;
+
+	// The .wav file for the Communications Tower Tile.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* CommunicationsTowerSettlingSound;
 
 	// Component for audio that will play the music chosen (for the fire spreading sounds).
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")

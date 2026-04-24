@@ -53,7 +53,13 @@ public:
 	int32 GrassTileID = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
-	int32 MountainTileID = 2;
+	int32 NonBurnableMountainTileID = 5;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 BurnableMountainTileID = 6;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 CommunicationsTowerTileID = 7;
 
 	// Reference to GameManager (for WindDirection). If not set, TileManager will auto-find one at BeginPlay.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game")

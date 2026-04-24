@@ -69,6 +69,10 @@ AAudioManager::AAudioManager()
 	AlertNotificationSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("AlertNotificationSoundComponent"));
 	AlertNotificationSoundComponent->SetupAttachment(AudioSceneRootComponent);
 	AlertNotificationSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	CommunicationsTowerSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("CommunicationsTowerSettlingSoundComponent"));
+	CommunicationsTowerSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	CommunicationsTowerSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 }
 
 // On the start of the game function.
@@ -92,6 +96,7 @@ void AAudioManager::BeginPlay()
 		FireSpreadingSoundComponent->SetSound(FireSpreadingSound);
 		WindDirectionChangeSoundComponent->SetSound(WindDirectionChangeSound);
 		AlertNotificationSoundComponent->SetSound(AlertNotificationSound);
+		CommunicationsTowerSettlingSoundComponent->SetSound(CommunicationsTowerSettlingSound);
 		BackgroundMusicComponent->SetVolumeMultiplier(0.5f);
 		BackgroundMusicComponent->Play();
 	}
@@ -170,6 +175,12 @@ void AAudioManager::PlayUnitSettlingSound(AUnit* SettlingUnit)
 				UGameplayStatics::PlaySound2D(this, MountainSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
 			}
 		}
+		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::COMMUNICATIONSTOWER)) {
+			if (CommunicationsTowerSettlingSound)
+			{
+				UGameplayStatics::PlaySound2D(this, CommunicationsTowerSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+			}
+		}
 	}
 }
 
@@ -191,7 +202,6 @@ void AAudioManager::PlayWindDirectionChangeSound()
 	if (WindDirectionChangeSound)
 	{
 		if (!(WindDirectionChangeSoundComponent->IsPlaying())) {
-			WindDirectionChangeSoundComponent->SetVolumeMultiplier(3.0f);
 			WindDirectionChangeSoundComponent->Play();
 		}
 	}

@@ -28,7 +28,7 @@ void ATileManager::BeginPlay()
 	//	}
 	//}
 
-	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, 5, this); // Generates the map procedurally.
+	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, 5, 6, 7, this); // Generates the map procedurally.
 
 	if (RegisteredTiles.Num() > 0)
 	{
@@ -330,6 +330,13 @@ void ATileManager::BurnOutTile(ATile* Tile)
 	{
 		ApplyCommunityDamage(Tile);
 		Tile->bHasBeenDestroyedByFire = true;
+	}
+	
+	if (Tile->TileID == CommunicationsTowerTileID) { // If the Tile being burned down is a Communications Tower...
+		GameManager->CommunicationsTowerDestroyed = true; // ...go ahead and set it to true in the Game Manager.
+		for (FPendingUnitDeployment& Unit : GameManager->PendingDeployments) { // This loop only activates once since there exists only one Communications Tower.
+			Unit.TurnsRemaining++;
+		}
 	}
 
 	// Swap to charred tile
