@@ -162,6 +162,9 @@ public:
 	//TArray<FString> GetAvailableAbilities();
 
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|References")
+	ATile* SpawnedTile;
+
 	UFUNCTION(BlueprintCallable, Category = "Unit|Abilities")
 	virtual bool CanUseAbility() const;
 
