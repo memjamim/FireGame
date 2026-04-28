@@ -165,6 +165,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Deployments")
 	TArray<FPendingUnitDeployment> PendingDeployments;
 
+	// A check to see if the Communications Tower is destroyed. If it is, add one turn to every Units' deployment time.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Deployments")
+	bool CommunicationsTowerDestroyed;
+
 	/**
 	 * UI calls this instead of spawning immediately.
 	 * Spends AP immediately (Action_Cost)

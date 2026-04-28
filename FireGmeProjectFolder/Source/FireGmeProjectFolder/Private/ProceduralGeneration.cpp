@@ -63,8 +63,8 @@ static void GrowCluster(const TArray<FIntVector>& Directions, TSet<FIntVector>& 
 
 // Procedurally generates a map for the game.
 void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileClass, int32 NumberOfTiles, int32 GrassTileID,
-										int32 ResidentialTileID, int32 ForestTileID, int32 MountainTileID, 
-										ATileManager* TileManager)
+										int32 ResidentialTileID, int32 ForestTileID, int32 NonBurnableMountainTileID,
+										int32 BurnableMountainTileID, int32 CommunicationsTowerID, ATileManager* TileManager)
 {
 	if (!World || !TileClass)
 	{
@@ -222,6 +222,9 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 	// Number of Mountain Tile strips we allow the map to have.
 	int32 MountainStrips = 4;
 
+	// Check to see if the Communications Tower has been set into the map or not.
+	bool CommunicationsTowerPlaced = false;
+
 	for (int i = 0; i < MountainStrips; i++)
 	{
 		FIntVector Seed = TileArray[FMath::RandRange(0, TileArray.Num() - 1)]; // Choose a random Tile...
@@ -232,6 +235,8 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 
 		GrowStrip(Directions, ChosenTiles, MountainStrip, Seed, MountainStripLength); // ...and grow the Mountain strip using the helper function.
 
+		int32 stripSize = MountainStrip.Num(); // The number of element in this given Mountain Strip.
+
 		// Fully applies the Mountain Tiles ontop of the Grass or Forest Tiles, overwriting them entirely.
 		for (const FIntVector& Coordinate : MountainStrip)
 		{
@@ -240,7 +245,24 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 				if (Tile->TileID == ForestTileID) {
 					TileManager->ForestTiles.Remove(Tile);
 				}
-				Tile->ApplyDataFromID(MountainTileID);
+				// Create a random chance for any given Non-Burnable Mountain to turn into a Burnable Mountain.
+				float burnableMountainChance = FMath::FRand();
+
+				if (burnableMountainChance < 0.15f) { // If the chance is too low...
+					burnableMountainChance = burnableMountainChance + 0.15f; // ...raise it just a bit.
+				}
+
+				if (burnableMountainChance >= 0.50f) { // We have a 65% chance for a given Non-Burnable Mountain Tile...
+					Tile->ApplyDataFromID(BurnableMountainTileID); // ...to turn into a Burnable Mountain Tile.
+				}
+				else { // But if it falls in the 35% chance...
+					Tile->ApplyDataFromID(NonBurnableMountainTileID); // ...we will instead see a Non-Burnable Mountain Tile.
+				}
+
+				if (!CommunicationsTowerPlaced) { // Now handle the Communications Tower Tile. If we haven't placed it...
+					Tile->ApplyDataFromID(CommunicationsTowerID); // ...turn the given Tile into the Communications Tower Tile.
+					CommunicationsTowerPlaced = true;
+				}
 			}
 		}
 	}
