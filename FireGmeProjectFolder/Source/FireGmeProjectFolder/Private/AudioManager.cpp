@@ -34,6 +34,14 @@ AAudioManager::AAudioManager()
 	WoodlandFFTranslatingSoundComponent->SetupAttachment(AudioSceneRootComponent);
 	WoodlandFFTranslatingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 
+	PlaneTranslatingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("PlaneTranslatingSoundComponent"));
+	PlaneTranslatingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	PlaneTranslatingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	FiretruckTranslatingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FiretruckTranslatingSoundComponent"));
+	FiretruckTranslatingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	FiretruckTranslatingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
 	GrassSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("GrassSettlingSoundComponent"));
 	GrassSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
 	GrassSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
@@ -54,9 +62,25 @@ AAudioManager::AAudioManager()
 	WaterSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
 	WaterSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 
-	MountainSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("MountainSettlingSoundComponent"));
-	MountainSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
-	MountainSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+	RockyMountainSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("RockyMountainSettlingSoundComponent"));
+	RockyMountainSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	RockyMountainSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	GrassyMountainSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("GrassyMountainSettlingSoundComponent"));
+	GrassyMountainSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	GrassyMountainSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	CommunicationsTowerSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("CommunicationsTowerSettlingSoundComponent"));
+	CommunicationsTowerSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	CommunicationsTowerSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	WaterTowerSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("WaterTowerSettlingSoundComponent"));
+	WaterTowerSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	WaterTowerSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	FireStationSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FireStationSettlingSoundComponent"));
+	FireStationSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	FireStationSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 
 	FireSpreadingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FireSpreadingSoundComponent"));
 	FireSpreadingSoundComponent->SetupAttachment(AudioSceneRootComponent);
@@ -69,10 +93,6 @@ AAudioManager::AAudioManager()
 	AlertNotificationSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("AlertNotificationSoundComponent"));
 	AlertNotificationSoundComponent->SetupAttachment(AudioSceneRootComponent);
 	AlertNotificationSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
-
-	CommunicationsTowerSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("CommunicationsTowerSettlingSoundComponent"));
-	CommunicationsTowerSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
-	CommunicationsTowerSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 }
 
 // On the start of the game function.
@@ -84,19 +104,30 @@ void AAudioManager::BeginPlay()
 	{
 		BackgroundMusicComponent->SetSound(BackgroundMusic);
 		EndTurnButtonSoundComponent->SetSound(EndTurnButtonSound);
+
+		// Unit translation sounds.
 		HelicopterTranslatingSoundComponent->SetSound(HelicopterTranslatingSound);
 		ResidentialFFTranslatingSoundComponent->SetSound(ResidentialFFTranslatingSound);
 		WoodlandFFTranslatingSoundComponent->SetSound(WoodlandFFTranslatingSound);
+		PlaneTranslatingSoundComponent->SetSound(PlaneTranslatingSound);
+		FiretruckTranslatingSoundComponent->SetSound(FiretruckTranslatingSound);
+
+		// Unit settling on a Tile sounds.
 		GrassSettlingSoundComponent->SetSound(GrassSettlingSound);
 		ResidentialSettlingSoundComponent->SetSound(ResidentialSettlingSound);
 		ForestSettlingSoundComponent->SetSound(ForestSettlingSound);
 		CharredSettlingSoundComponent->SetSound(CharredSettlingSound);
 		WaterSettlingSoundComponent->SetSound(WaterSettlingSound);
-		MountainSettlingSoundComponent->SetSound(MountainSettlingSound);
+		RockyMountainSettlingSoundComponent->SetSound(RockyMountainSettlingSound);
+		GrassyMountainSettlingSoundComponent->SetSound(GrassyMountainSettlingSound);
+		CommunicationsTowerSettlingSoundComponent->SetSound(CommunicationsTowerSettlingSound);
+		WaterTowerSettlingSoundComponent->SetSound(WaterTowerSettlingSound);
+		FireStationSettlingSoundComponent->SetSound(FireStationSettlingSound);
+
 		FireSpreadingSoundComponent->SetSound(FireSpreadingSound);
 		WindDirectionChangeSoundComponent->SetSound(WindDirectionChangeSound);
 		AlertNotificationSoundComponent->SetSound(AlertNotificationSound);
-		CommunicationsTowerSettlingSoundComponent->SetSound(CommunicationsTowerSettlingSound);
+
 		BackgroundMusicComponent->SetVolumeMultiplier(0.5f);
 		BackgroundMusicComponent->Play();
 	}
@@ -116,21 +147,33 @@ void AAudioManager::PlayEndTurnButtonSound()
 void AAudioManager::PlayUnitTranslatingSound(AUnit* MovingUnit)
 {
 	if (MovingUnit->UnitData.ID == static_cast<int32>(UnitTypes::HELICOPTER)) {
-		if (EndTurnButtonSound)
+		if (HelicopterTranslatingSound)
 		{
 			UGameplayStatics::PlaySound2D(this, HelicopterTranslatingSound); // Non-spatial sounds. Use for buttons and UI clicks.
 		}
 	}
 	else if (MovingUnit->UnitData.ID == static_cast<int32>(UnitTypes::RESIDENTIAL_FIREFIGHTER)) {
-		if (EndTurnButtonSound)
+		if (ResidentialFFTranslatingSound)
 		{
 			UGameplayStatics::PlaySound2D(this, ResidentialFFTranslatingSound); // Non-spatial sounds. Use for buttons and UI clicks.
 		}
 	}
 	else if (MovingUnit->UnitData.ID == static_cast<int32>(UnitTypes::WOODLAND_FIREFIGHTER)) {
-		if (EndTurnButtonSound)
+		if (WoodlandFFTranslatingSound)
 		{
 			UGameplayStatics::PlaySound2D(this, WoodlandFFTranslatingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+		}
+	}
+	else if (MovingUnit->UnitData.ID == static_cast<int32>(UnitTypes::FIRE_PLANE)) {
+		if (PlaneTranslatingSound)
+		{
+			UGameplayStatics::PlaySound2D(this, PlaneTranslatingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+		}
+	}
+	else if (MovingUnit->UnitData.ID == static_cast<int32>(UnitTypes::FIRE_TRUCK)) {
+		if (FiretruckTranslatingSound)
+		{
+			UGameplayStatics::PlaySound2D(this, FiretruckTranslatingSound); // Non-spatial sounds. Use for buttons and UI clicks.
 		}
 	}
 }
@@ -138,7 +181,8 @@ void AAudioManager::PlayUnitTranslatingSound(AUnit* MovingUnit)
 // Function that plays the settling sound for a given Unit. This is called AFTER setting the currentTile, so currentTile represents the new Tile it just moved to.
 void AAudioManager::PlayUnitSettlingSound(AUnit* SettlingUnit)
 {
-	if (SettlingUnit->UnitData.ID != static_cast<int32>(UnitTypes::HELICOPTER)) {
+	if (SettlingUnit->UnitData.ID != static_cast<int32>(UnitTypes::HELICOPTER) &&
+		SettlingUnit->UnitData.ID != static_cast<int32>(UnitTypes::FIRE_PLANE)) {
 		if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::FOREST)) {
 			if (ForestSettlingSound)
 			{
@@ -169,16 +213,34 @@ void AAudioManager::PlayUnitSettlingSound(AUnit* SettlingUnit)
 				UGameplayStatics::PlaySound2D(this, ResidentialSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
 			}
 		}
-		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::MOUNTAIN)) {
-			if (MountainSettlingSound)
+		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::ROCKY_MOUNTAIN)) {
+			if (RockyMountainSettlingSound)
 			{
-				UGameplayStatics::PlaySound2D(this, MountainSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+				UGameplayStatics::PlaySound2D(this, RockyMountainSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
 			}
 		}
-		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::COMMUNICATIONSTOWER)) {
+		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::GRASSY_MOUNTAIN)) {
+			if (GrassyMountainSettlingSound)
+			{
+				UGameplayStatics::PlaySound2D(this, GrassyMountainSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+			}
+		}
+		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::COMMUNICATIONS_TOWER)) {
 			if (CommunicationsTowerSettlingSound)
 			{
 				UGameplayStatics::PlaySound2D(this, CommunicationsTowerSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+			}
+		}
+		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::WATER_TOWER)) {
+			if (WaterTowerSettlingSound)
+			{
+				UGameplayStatics::PlaySound2D(this, WaterTowerSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+			}
+		}
+		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::FIRE_STATION)) {
+			if (FireStationSettlingSound)
+			{
+				UGameplayStatics::PlaySound2D(this, FireStationSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
 			}
 		}
 	}

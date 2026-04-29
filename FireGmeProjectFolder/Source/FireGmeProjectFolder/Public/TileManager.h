@@ -34,6 +34,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
 	TArray<ATile*> ForestTiles;
 
+	// All Grass Tiles currently on the board
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
+	TArray<ATile*> GrassTiles;
+
 	UPROPERTY(EditAnywhere, Category = "Tiles")
 	TSubclassOf<ATile> TileClass;
 
@@ -60,6 +64,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
 	int32 CommunicationsTowerTileID = 7;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 WaterTowerTileID = 8;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 FireStationTileID = 9;
 
 	// Reference to GameManager (for WindDirection). If not set, TileManager will auto-find one at BeginPlay.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game")
