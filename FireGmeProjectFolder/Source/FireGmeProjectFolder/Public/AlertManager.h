@@ -176,8 +176,7 @@ private:
 	int32 FindActiveAlertIndexById(int32 AlertInstanceId) const;
 	void RemoveAlertAtIndex(int32 Index);
 
-	void SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible);
 	void RegisterAlertTileLink(int32 AlertInstanceId, const FIntVector& TileCoords);
 	void UnregisterAlertTileLink(int32 AlertInstanceId);
 	void HandleAlertClickFromCursor();
-};
+	void SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible, int32 TurnsRemaining = 0);};

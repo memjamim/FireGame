@@ -323,7 +323,29 @@ void AUnit::UpdateTranslation(float DeltaTime)
 bool AUnit::CanMoveToTile_Implementation(ATile* TargetTile)
 {
 	// Base check — override in Blueprint for range, terrain, occupied checks
-	return IsValid(TargetTile);
+	if (!IsValid(TargetTile))
+	{
+		return false;
+	}
+
+	// Disallow moving into a tile already occupied by another unit
+	if (IsValid(GameManager))
+	{
+		for (AUnit* Unit : GameManager->UnitsInPlay)
+		{
+			if (!IsValid(Unit) || Unit == this)
+			{
+				continue;
+			}
+
+			if (Unit->CurrentTile == TargetTile)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 void AUnit::OnMoveComplete_Implementation()

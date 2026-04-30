@@ -1,10 +1,18 @@
 #include "Tile.h"
-#include "UObject/ConstructorHelpers.h" 
+#include "UObject/ConstructorHelpers.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "TimerManager.h"
+#include "Components/TextRenderComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Camera/PlayerCameraManager.h"
+
 
 // Sets default values
 ATile::ATile()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickGroup = TG_PostUpdateWork;
 	bIsSelected = false;
 
 	TileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TileMesh"));
@@ -16,18 +24,37 @@ ATile::ATile()
 	AlertIndicator->SetVisibility(false);
 	AlertIndicator->SetRelativeLocation(FVector(0.f, 0.f, AlertIndicatorZOffset));
 	AlertIndicator->SetUsingAbsoluteRotation(true);
-
 	AlertIndicator->SetCollisionObjectType(ECC_WorldDynamic);
 	AlertIndicator->SetCollisionResponseToAllChannels(ECR_Ignore);
 	AlertIndicator->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	AlertIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	AlertTurnsText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("AlertTurnsText"));
+	AlertTurnsText->SetupAttachment(AlertIndicator);
+	AlertTurnsText->SetUsingAbsoluteRotation(true);
+	AlertTurnsText->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
+	AlertTurnsText->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
+	AlertTurnsText->SetRelativeLocation(FVector(0.f, 0.f, 40.f));
+	AlertTurnsText->SetWorldSize(54.0f);
+	AlertTurnsText->SetTextRenderColor(FColor::White);
+	AlertTurnsText->SetHiddenInGame(true);
+	AlertTurnsText->SetVisibility(false);
+	AlertTurnsText->SetText(FText::AsNumber(AlertTurnsRemaining));
+	AlertTurnsText->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+
 	static ConstructorHelpers::FObjectFinder<UTexture2D> AlertSpriteObj(
-		TEXT("/Game/FireGame/UI/T_Alert-Icon.T_Alert-Icon"));
+		TEXT("/Game/FireGame/Alerts/T_red_pin_shape.T_red_pin_shape"));
 	if (AlertSpriteObj.Succeeded())
 	{
 		AlertIndicatorTexture = AlertSpriteObj.Object;
 		AlertIndicator->SetSprite(AlertIndicatorTexture);
+	}
+
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> ExtinguishEffectObj(
+		TEXT("/Game/FireGame/Tiles/Water_Materials/NS_Extinguish.NS_Extinguish"));
+	if (ExtinguishEffectObj.Succeeded())
+	{
+		ExtinguishEffect = ExtinguishEffectObj.Object;
 	}
 }
 
@@ -62,6 +89,8 @@ void ATile::BeginPlay()
 	{
 		SyncGridCoordinatesFromWorld();
 	}
+
+	SetAlertTurnsRemaining(AlertTurnsRemaining);
 }
 
 void ATile::OnConstruction(const FTransform& Transform)
@@ -78,6 +107,7 @@ void ATile::OnConstruction(const FTransform& Transform)
 void ATile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	UpdateAlertTurnsTextFacingCamera();
 }
 
 void ATile::Ignite()
@@ -92,6 +122,33 @@ void ATile::Extinguish()
 {
 	bIsBurning = false;
 	bWillIgniteNextTurn = false;
+
+	if (!ExtinguishEffect)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ExtinguishEffect is null on tile: %s"), *GetName());
+		return;
+	}
+
+	UNiagaraComponent* SpawnedEffect = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		this,
+		ExtinguishEffect,
+		GetActorLocation(),
+		FRotator::ZeroRotator,
+		FVector(1.0f),
+		true,
+		true,
+		ENCPoolMethod::None,
+		true);
+
+	if (!SpawnedEffect)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to spawn ExtinguishEffect on tile: %s"), *GetName());
+	}
+}
+
+bool ATile::IsAlertIndicatorVisible() const
+{
+	return AlertIndicator && AlertIndicator->IsVisible();
 }
 
 void ATile::SetAlertIndicatorVisible(bool bVisible)
@@ -105,11 +162,27 @@ void ATile::SetAlertIndicatorVisible(bool bVisible)
 	AlertIndicator->SetVisibility(bVisible);
 	AlertIndicator->SetCollisionEnabled(bVisible ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 	AlertIndicator->SetRelativeLocation(FVector(0.f, 0.f, AlertIndicatorZOffset));
+
+	if (AlertTurnsText)
+	{
+		const bool bShowTurns = bVisible && AlertTurnsRemaining > 0;
+		AlertTurnsText->SetHiddenInGame(!bShowTurns);
+		AlertTurnsText->SetVisibility(bShowTurns);
+	}
 }
 
-bool ATile::IsAlertIndicatorVisible() const
+void ATile::SetAlertTurnsRemaining(int32 InTurnsRemaining)
 {
-	return AlertIndicator && AlertIndicator->IsVisible();
+	AlertTurnsRemaining = FMath::Max(0, InTurnsRemaining);
+
+	if (AlertTurnsText)
+	{
+		AlertTurnsText->SetText(FText::AsNumber(AlertTurnsRemaining));
+
+		const bool bShowTurns = IsAlertIndicatorVisible() && AlertTurnsRemaining > 0;
+		AlertTurnsText->SetHiddenInGame(!bShowTurns);
+		AlertTurnsText->SetVisibility(bShowTurns);
+	}
 }
 
 void ATile::ReduceCommunityHealthCost()
@@ -271,4 +344,40 @@ void ATile::SyncWorldFromGrid()
 		GridCoordinates.X,
 		GridCoordinates.Y,
 		GridCoordinates.Z);
+}
+
+void ATile::UpdateAlertTurnsTextFacingCamera() const
+{
+	if (!bAlertTurnsTextFacesCamera || !AlertTurnsText || !AlertTurnsText->IsVisible())
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const APlayerController* PlayerController = UGameplayStatics::GetPlayerController(World, 0);
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	FVector ViewLocation = FVector::ZeroVector;
+	FRotator ViewRotation = FRotator::ZeroRotator;
+	PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+
+	const FVector TextLocation = AlertTurnsText->GetComponentLocation();
+	const FVector ToCamera = ViewLocation - TextLocation;
+	if (ToCamera.IsNearlyZero())
+	{
+		return;
+	}
+
+	FRotator FaceCameraRotation = ToCamera.Rotation();
+
+	FaceCameraRotation.Yaw += 0.0f;
+	AlertTurnsText->SetWorldRotation(FaceCameraRotation);
 }
