@@ -65,7 +65,7 @@ static void GrowCluster(const TArray<FIntVector>& Directions, TSet<FIntVector>& 
 void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileClass, int32 NumberOfTiles, int32 GrassTileID,
 										int32 ResidentialTileID, int32 ForestTileID, int32 NonBurnableMountainTileID,
 										int32 BurnableMountainTileID, int32 CommunicationsTowerID, int32 WaterTowerID,
-										int32 FireStationID, ATileManager* TileManager)
+										int32 FireStationID, int32 SchoolTileID, ATileManager* TileManager)
 {
 	if (!World || !TileClass)
 	{
@@ -249,7 +249,7 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 				if (Tile->TileID == ForestTileID) {
 					TileManager->ForestTiles.Remove(Tile);
 				}
-				if (Tile->TileID == GrassTileID) {
+				else if (Tile->TileID == GrassTileID) {
 					TileManager->GrassTiles.Remove(Tile);
 				}
 
@@ -289,6 +289,8 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 
 		bool clusterFireStationPlaced = false;
 
+		bool clusterSchoolPlaced = false;
+
 		int fireStationTalley = 0;
 
 		// Fully applies the Residential Tiles ontop of the Grass, Forest, or Mountain Tiles, overwriting them entirely.
@@ -298,27 +300,39 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 				// Create a random chance for any given Residential Tile to turn into a Fire Station.
 				float fireStationChance = FMath::FRand();
 
-				if (Tile->TileID != FireStationID && Tile->TileID != CommunicationsTowerID) { // Make sure we are not replacing a Fire Station.
-					if (fireStationChance >= 0.25f) { // If we are not allowed to spawn a Fire Station here (chance >= 25%).
-						if (Tile->TileID == ForestTileID) {
-							TileManager->ForestTiles.Remove(Tile);
-						}
-						if (Tile->TileID == GrassTileID) {
-							TileManager->GrassTiles.Remove(Tile);
-						}
-						Tile->ApplyDataFromID(ResidentialTileID);
-						TileManager->ResidentialTiles.Add(Tile);
+				if (!clusterSchoolPlaced) { // If we have not placed the School Tile yet (always the first Tile in a Residential Cluster).
+					if (Tile->TileID == ForestTileID) {
+						TileManager->ForestTiles.Remove(Tile);
 					}
-					else { // If we are allowed to spawn a Fire Station here (chance < 25%).
-						if (!clusterFireStationPlaced) {
+					else if (Tile->TileID == GrassTileID) {
+						TileManager->GrassTiles.Remove(Tile);
+					}
+					Tile->ApplyDataFromID(SchoolTileID);
+					clusterSchoolPlaced = true;
+				}
+				else {
+					if (Tile->TileID != FireStationID && Tile->TileID != CommunicationsTowerID && Tile->TileID != SchoolTileID) { // Make sure we are not replacing a Fire Station.
+						if (fireStationChance >= 0.25f) { // If we are not allowed to spawn a Fire Station here (chance >= 25%).
 							if (Tile->TileID == ForestTileID) {
 								TileManager->ForestTiles.Remove(Tile);
 							}
-							if (Tile->TileID == GrassTileID) {
+							else if (Tile->TileID == GrassTileID) {
 								TileManager->GrassTiles.Remove(Tile);
 							}
-							Tile->ApplyDataFromID(FireStationID);
-							clusterFireStationPlaced = true;
+							Tile->ApplyDataFromID(ResidentialTileID);
+							TileManager->ResidentialTiles.Add(Tile);
+						}
+						else if (Tile->TileID != SchoolTileID) { // If we are allowed to spawn a Fire Station here (chance < 25%).
+							if (!clusterFireStationPlaced) {
+								if (Tile->TileID == ForestTileID) {
+									TileManager->ForestTiles.Remove(Tile);
+								}
+								else if (Tile->TileID == GrassTileID) {
+									TileManager->GrassTiles.Remove(Tile);
+								}
+								Tile->ApplyDataFromID(FireStationID);
+								clusterFireStationPlaced = true;
+							}
 						}
 					}
 				}

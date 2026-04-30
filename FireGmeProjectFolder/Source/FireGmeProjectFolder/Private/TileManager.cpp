@@ -28,7 +28,7 @@ void ATileManager::BeginPlay()
 	//	}
 	//}
 
-	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, 5, 6, 7, 8, 9, this); // Generates the map procedurally.
+	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, 5, 6, 7, 8, 9, 11, this); // Generates the map procedurally.
 
 	if (RegisteredTiles.Num() > 0)
 	{
@@ -388,12 +388,22 @@ void ATileManager::BurnOutTile(ATile* Tile)
 	}
 
 	// Swap to charred tile
-	Tile->TileID = CharredTileID;
+	if ((Tile->TileID == NonBurnableMountainTileID) || (Tile->TileID == BurnableMountainTileID)) { // If the Tile being burned down is a Mountain.
+		Tile->TileID = CharredMountainTileID;
 
-	// Charred tiles should never reignite
-	Tile->CurrentFireHealth = 0;
+		// Charred tiles should never reignite
+		Tile->CurrentFireHealth = 0;
 
-	Tile->ApplyDataFromID(CharredTileID);
+		Tile->ApplyDataFromID(CharredMountainTileID);
+	}
+	else {
+		Tile->TileID = CharredTileID;
+
+		// Charred tiles should never reignite
+		Tile->CurrentFireHealth = 0;
+
+		Tile->ApplyDataFromID(CharredTileID);
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("Tile burned out and became charred at (%d, %d, %d)"),
 		Tile->GridCoordinates.X,

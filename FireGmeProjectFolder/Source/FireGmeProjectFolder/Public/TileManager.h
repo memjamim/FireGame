@@ -71,6 +71,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
 	int32 FireStationTileID = 9;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 CharredMountainTileID = 10;
+
 	// Reference to GameManager (for WindDirection). If not set, TileManager will auto-find one at BeginPlay.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game")
 	AGameManager* GameManager = nullptr;
