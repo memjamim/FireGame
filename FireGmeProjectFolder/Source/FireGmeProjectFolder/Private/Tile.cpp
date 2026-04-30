@@ -225,6 +225,11 @@ bool ATile::ApplyDataFromID(int32 InTileID)
 	return false;
 }
 
+void ATile::ExtinguishTilesVisuals_Implementation()
+{
+	// Override in Blueprint — updates the Tile's material visuals.
+}
+
 FIntVector ATile::ConvertWorldToGridCoordinates_Implementation(const FVector& WorldLocation) const
 {
 	// Default fallback only. Override this in BP_Tile with real world coordinates. Not overriding in BP_Tile will cause this to break.

@@ -77,6 +77,10 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Unit|Position")
 	ATile* GetCurrentTile() const { return CurrentTile; }
 
+	/** Returns the tile currently under this unit based on world location. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Unit|Position")
+	ATile* GetTileUnderUnit(float SnapRadius = 200.0f) const;
+
 	/** Get the six neighbors of the unit's current tile via TileManager. */
 	UFUNCTION(BlueprintCallable, Category = "Unit|Position")
 	TArray<ATile*> GetAdjacentTiles() const;

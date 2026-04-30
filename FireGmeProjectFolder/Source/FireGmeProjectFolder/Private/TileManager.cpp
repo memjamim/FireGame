@@ -28,7 +28,7 @@ void ATileManager::BeginPlay()
 	//	}
 	//}
 
-	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, 5, this); // Generates the map procedurally.
+	ProceduralGeneration::GenerateMap(GetWorld(), TileClass, 150, 1, 4, 0, 5, 6, 7, 8, 9, this); // Generates the map procedurally.
 
 	if (RegisteredTiles.Num() > 0)
 	{
@@ -144,6 +144,9 @@ int32 ATileManager::GetWindDirectionIndex() const
 
 void ATileManager::ExecuteFireTurn()
 {
+	// A list of all Water Towers in the map (in case we ever want more than one).
+	TArray<ATile*> BurningWaterTowers;
+
 	// Track tiles that ignite at the start of this fire step.
 	TSet<ATile*> NewlyIgnitedThisTurn;
 
@@ -203,6 +206,9 @@ void ATileManager::ExecuteFireTurn()
 
 		if (BurningTile->CurrentFireHealth <= 0)
 		{
+			if (BurningTile->TileID == WaterTowerTileID) {
+				BurningWaterTowers.Add(BurningTile); // Keep track of the Water Tower that is about to be destroyed.
+			}
 			BurnOutTile(BurningTile);
 		}
 		else
@@ -223,7 +229,27 @@ void ATileManager::ExecuteFireTurn()
 		}
 	}
 
-	// 5) Apply new preview marks
+	// 5) Extinguish any Tiles adjacent to recently burned down Water Towers.
+	for (ATile* WaterTower : BurningWaterTowers)
+	{
+		if (!IsValid(WaterTower)) continue;
+
+		TArray<ATile*> Neighbors = GetNeighborTiles(WaterTower->GridCoordinates);
+
+		for (ATile* Neighbor : Neighbors)
+		{
+			if (!IsValid(Neighbor)) continue;
+
+			Neighbor->Extinguish();
+
+			TilesToMarkNextTurn.Remove(Neighbor);
+
+			Neighbor->UpdateTileVisuals();
+			Neighbor->ExtinguishTilesVisuals();
+		}
+	}
+
+	// 6) Apply new preview marks
 	for (ATile* TileToMark : TilesToMarkNextTurn)
 	{
 		if (!IsValid(TileToMark)) continue;
@@ -330,6 +356,35 @@ void ATileManager::BurnOutTile(ATile* Tile)
 	{
 		ApplyCommunityDamage(Tile);
 		Tile->bHasBeenDestroyedByFire = true;
+	}
+	
+	if (Tile->TileID == CommunicationsTowerTileID) { // If the Tile being burned down is a Communications Tower...
+		GameManager->CommunicationsTowerDestroyed = true; // ...go ahead and set it to true in the Game Manager.
+		for (FPendingUnitDeployment& Unit : GameManager->PendingDeployments) { // This loop only activates once since there exists only one Communications Tower.
+			Unit.TurnsRemaining++;
+		}
+	}
+
+	if (Tile->TileID == WaterTowerTileID) { // If the Tile being burned down is a Water Tower...
+		GameManager->WaterTowerDestroyed = true;
+		//UE_LOG(LogTemp, Warning, TEXT("Water Tower at: %s"), *Tile->GridCoordinates.ToString());
+
+		//TArray<ATile*> neighboringTiles = GetNeighborTiles(Tile->GridCoordinates); // Get all of the neighbors of the Water Tower...
+
+		//for (ATile* Neighbor : neighboringTiles)
+		//{
+		//	if (Neighbor)
+		//	{
+		//		UE_LOG(LogTemp, Warning, TEXT("Neighbor %s ID=%d Burn=%d WillIgnite=%d"),
+		//			*Neighbor->GridCoordinates.ToString(),
+		//			Neighbor->TileID,
+		//			Neighbor->bIsBurning,
+		//			Neighbor->bWillIgniteNextTurn);
+		//	}
+		//}
+		//for (ATile* Neighbor : neighboringTiles) {
+		//	Neighbor->Extinguish(); // ...extinguish them.
+		//}
 	}
 
 	// Swap to charred tile

@@ -483,6 +483,51 @@ bool AUnit::HasEnoughStamina(int32 Required) const
 	return CurrentStamina >= Required;
 }
 
+ATile* AUnit::GetTileUnderUnit(float SnapRadius) const
+{
+	if (!TileManager)
+	{
+		return nullptr;
+	}
+
+	// First try a grid lookup using tile world->grid conversion
+	if (IsValid(CurrentTile))
+	{
+		const FIntVector GridAtUnit = CurrentTile->ConvertWorldToGridCoordinates(GetActorLocation());
+		if (ATile* const* FoundByGrid = TileManager->TileLookup.Find(GridAtUnit))
+		{
+			if (IsValid(*FoundByGrid))
+			{
+				return *FoundByGrid;
+			}
+		}
+	}
+
+	// Fallback: nearest registered tile in XY plane.
+	const FVector UnitLocation = GetActorLocation();
+	const float MaxDistanceSq = (SnapRadius > 0.0f) ? FMath::Square(SnapRadius) : BIG_NUMBER;
+
+	ATile* BestTile = nullptr;
+	float BestDistanceSq = BIG_NUMBER;
+
+	for (ATile* Tile : TileManager->RegisteredTiles)
+	{
+		if (!IsValid(Tile))
+		{
+			continue;
+		}
+
+		const float DistanceSq2D = FVector::DistSquared2D(UnitLocation, Tile->GetActorLocation());
+		if (DistanceSq2D <= MaxDistanceSq && DistanceSq2D < BestDistanceSq)
+		{
+			BestDistanceSq = DistanceSq2D;
+			BestTile = Tile;
+		}
+	}
+
+	return BestTile;
+}
+
 // Helper functions
 
 int32 AUnit::GetCubeDistance(FIntVector CubeA, FIntVector CubeB)

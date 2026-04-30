@@ -30,6 +30,8 @@ AGameManager::AGameManager()
 {
 	CityHealth = MAX_CITY_HEALTH;
 
+	CommunicationsTowerDestroyed = false;
+
 	PrimaryActorTick.bCanEverTick = true;
 
 	ActionPoints = STARTING_AP;
@@ -402,7 +404,12 @@ bool AGameManager::PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoord
 	FPendingUnitDeployment Deployment;
 	Deployment.UnitRowName = UnitRowName;
 	Deployment.SpawnCoords = SpawnCoords;
-	Deployment.TurnsRemaining = Row->Turns_To_Deploy;
+	if (!CommunicationsTowerDestroyed) { // If the tower is NOT destroyed...
+		Deployment.TurnsRemaining = Row->Turns_To_Deploy; // Don't change the Unit deployment time.
+	}
+	else { // Otherwise...
+		Deployment.TurnsRemaining = Row->Turns_To_Deploy + 1; // Add one turn to the Unit deployment time.
+	}
 	Deployment.TurnQueued = CurrentTurn;
 
 	PendingDeployments.Add(Deployment);

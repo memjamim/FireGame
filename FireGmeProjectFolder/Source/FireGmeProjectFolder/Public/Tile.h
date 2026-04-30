@@ -154,4 +154,9 @@ public:
 	/** Override in Blueprint to remove visual feedback. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Tile|Selection")
 	void OnDeselected();
+
+	/** Override in Blueprint for visual feedback. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Tile|Selection")
+	void ExtinguishTilesVisuals();
+	virtual void ExtinguishTilesVisuals_Implementation();
 };
