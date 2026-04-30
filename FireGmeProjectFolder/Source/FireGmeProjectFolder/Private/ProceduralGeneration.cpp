@@ -260,10 +260,10 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 					burnableMountainChance = burnableMountainChance + 0.15f; // ...raise it just a bit.
 				}
 
-				if (burnableMountainChance >= 0.50f) { // We have a 65% chance for a given Non-Burnable Mountain Tile...
+				if (burnableMountainChance >= 0.50f && Tile->TileID != CommunicationsTowerID) { // We have a 65% chance for a given Non-Burnable Mountain Tile...
 					Tile->ApplyDataFromID(BurnableMountainTileID); // ...to turn into a Burnable Mountain Tile.
 				}
-				else { // But if it falls in the 35% chance...
+				else if (Tile->TileID != CommunicationsTowerID){ // But if it falls in the 35% chance...
 					Tile->ApplyDataFromID(NonBurnableMountainTileID); // ...we will instead see a Non-Burnable Mountain Tile.
 				}
 
@@ -298,7 +298,7 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 				// Create a random chance for any given Residential Tile to turn into a Fire Station.
 				float fireStationChance = FMath::FRand();
 
-				if (Tile->TileID != FireStationID) { // Make sure we are not replacing a Fire Station.
+				if (Tile->TileID != FireStationID && Tile->TileID != CommunicationsTowerID) { // Make sure we are not replacing a Fire Station.
 					if (fireStationChance >= 0.25f) { // If we are not allowed to spawn a Fire Station here (chance >= 25%).
 						if (Tile->TileID == ForestTileID) {
 							TileManager->ForestTiles.Remove(Tile);
@@ -326,8 +326,10 @@ void ProceduralGeneration::GenerateMap(UWorld* World, TSubclassOf<ATile> TileCla
 			fireStationTalley++; // Talley up how many times we've been through this loop...
 			if (!clusterFireStationPlaced && fireStationTalley == Cluster.Num()) { // ...and if we are at the end of it...
 				if (ATile* Tile = TileManager->TileLookup.FindRef(Coordinate)) {
-					Tile->ApplyDataFromID(FireStationID); // ...create a Fire Station if one has not already been made yet.
-					clusterFireStationPlaced = true;
+					if (Tile->TileID != CommunicationsTowerID) {
+						Tile->ApplyDataFromID(FireStationID); // ...create a Fire Station if one has not already been made yet.
+						clusterFireStationPlaced = true;
+					}
 				}
 			}
 		}
