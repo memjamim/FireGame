@@ -9,7 +9,10 @@
 #include "Engine/Texture2D.h"       
 #include "Tile.generated.h"
 
+class UNiagaraSystem;
 class ATileManager;
+class UTextRenderComponent;
+class UBillboardComponent;
 
 UCLASS()
 class FIREGMEPROJECTFOLDER_API ATile : public AActor
@@ -26,7 +29,13 @@ public:
 	TObjectPtr<UTexture2D> AlertIndicatorTexture = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Alert")
-	float AlertIndicatorZOffset = 300.0f;
+	float AlertIndicatorZOffset = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Alert")
+	float AlertTurnsTextPitchOffset = -90.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Alert")
+	bool bMirrorAlertTurnsText = false;
 
 	UFUNCTION(BlueprintCallable, Category = "Tile|Alert")
 	void SetAlertIndicatorVisible(bool bVisible);
@@ -34,9 +43,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tile|Alert")
 	bool IsAlertIndicatorVisible() const;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tile|Alert")
+	UTextRenderComponent* AlertTurnsText = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Alert")
+	int32 AlertTurnsRemaining = 0;
+
+	UFUNCTION(BlueprintCallable, Category = "Tile|Alert")
+	void SetAlertTurnsRemaining(int32 InTurnsRemaining);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Alert")
+	bool bAlertTurnsTextFacesCamera = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Alert")
+	float AlertTurnsTextYawOffset = 180.0f;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+	void UpdateAlertTurnsTextFacingCamera() const;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -98,6 +123,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Visual")
 	TObjectPtr<UMaterialInterface> BurningMaterial = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Tile|FX")
+	TObjectPtr<UNiagaraSystem> ExtinguishEffect = nullptr;
 
 	UFUNCTION(BlueprintCallable, Category = "Tile")
 	void Ignite();

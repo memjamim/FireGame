@@ -352,49 +352,6 @@ bool AAlertManager::CanResolveAlertOption(int32 AlertInstanceId, int32 OptionInd
 	return true;
 }
 
-void AAlertManager::ProcessTurnStart()
-{
-	if (!CacheManagerReferences() || !AlertDataTable)
-	{
-		return;
-	}
-
-	static const FString Context(TEXT("ProcessTurnStart"));
-
-	for (int32 i = ActiveAlerts.Num() - 1; i >= 0; --i)
-	{
-		FActiveAlertInstance& Instance = ActiveAlerts[i];
-		if (Instance.bResolved)
-		{
-			continue;
-		}
-
-		Instance.TurnsRemaining -= 1;
-		if (Instance.TurnsRemaining > 0)
-		{
-			continue;
-		}
-
-		const int32 ExpiredInstanceId = Instance.InstanceId;
-
-		if (const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context))
-		{
-			OnAlertExpired_BP(Instance, *Data);
-		}
-
-		OnAlertExpired.Broadcast(ExpiredInstanceId);
-		RemoveAlertAtIndex(i);
-	}
-
-	const int32 CurrentTurn = GameManager ? GameManager->CurrentTurn : 0;
-	const bool bForceSpawn = (GuaranteedSpawnEveryNTurns > 0) && ((CurrentTurn - LastSpawnTurn) >= GuaranteedSpawnEveryNTurns);
-	const bool bRollSpawn = (FMath::RandRange(1, 100) <= SpawnChancePercent);
-
-	if ((bForceSpawn || bRollSpawn) && TrySpawnRandomAlert())
-	{
-		LastSpawnTurn = CurrentTurn;
-	}
-}
 
 bool AAlertManager::GetAlertDisplayData(int32 AlertInstanceId, FActiveAlertInstance& OutInstance, FAlertData& OutData) const
 {
@@ -664,13 +621,6 @@ void AAlertManager::RemoveAlertAtIndex(int32 Index)
 	ActiveAlerts.RemoveAt(Index);
 }
 
-void AAlertManager::RegisterAlertTileLink(int32 AlertInstanceId, const FIntVector& TileCoords)
-{
-	AlertIdToTileCoords.Add(AlertInstanceId, TileCoords);
-	TileCoordsToAlertId.Add(TileCoords, AlertInstanceId);
-	SetTileAlertIndicator(TileCoords, true);
-}
-
 void AAlertManager::UnregisterAlertTileLink(int32 AlertInstanceId)
 {
 	const FIntVector* FoundCoords = AlertIdToTileCoords.Find(AlertInstanceId);
@@ -682,22 +632,6 @@ void AAlertManager::UnregisterAlertTileLink(int32 AlertInstanceId)
 	SetTileAlertIndicator(*FoundCoords, false);
 	TileCoordsToAlertId.Remove(*FoundCoords);
 	AlertIdToTileCoords.Remove(AlertInstanceId);
-}
-
-void AAlertManager::SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible)
-{
-	if (!TileManager)
-	{
-		return;
-	}
-
-	if (ATile* const* FoundTile = TileManager->TileLookup.Find(TileCoords))
-	{
-		if (IsValid(*FoundTile))
-		{
-			(*FoundTile)->SetAlertIndicatorVisible(bVisible);
-		}
-	}
 }
 
 void AAlertManager::HandleAlertClickFromCursor()
@@ -764,4 +698,81 @@ bool AAlertManager::GetActiveAlertById(int32 AlertInstanceId, FActiveAlertInstan
 
 	OutAlertInstance = ActiveAlerts[Index];
 	return true;
+}
+
+void AAlertManager::RegisterAlertTileLink(int32 AlertInstanceId, const FIntVector& TileCoords)
+{
+	AlertIdToTileCoords.Add(AlertInstanceId, TileCoords);
+	TileCoordsToAlertId.Add(TileCoords, AlertInstanceId);
+
+	int32 TurnsRemaining = 0;
+	const int32 AlertIndex = FindActiveAlertIndexById(AlertInstanceId);
+	if (AlertIndex != INDEX_NONE)
+	{
+		TurnsRemaining = ActiveAlerts[AlertIndex].TurnsRemaining;
+	}
+
+	SetTileAlertIndicator(TileCoords, true, TurnsRemaining);
+}
+
+void AAlertManager::ProcessTurnStart()
+{
+	if (!CacheManagerReferences() || !AlertDataTable)
+	{
+		return;
+	}
+
+	static const FString Context(TEXT("ProcessTurnStart"));
+
+	for (int32 i = ActiveAlerts.Num() - 1; i >= 0; --i)
+	{
+		FActiveAlertInstance& Instance = ActiveAlerts[i];
+		if (Instance.bResolved)
+		{
+			continue;
+		}
+
+		Instance.TurnsRemaining -= 1;
+		if (Instance.TurnsRemaining > 0)
+		{
+			SetTileAlertIndicator(Instance.TileCoords, true, Instance.TurnsRemaining);
+			continue;
+		}
+
+		const int32 ExpiredInstanceId = Instance.InstanceId;
+
+		if (const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context))
+		{
+			OnAlertExpired_BP(Instance, *Data);
+		}
+
+		OnAlertExpired.Broadcast(ExpiredInstanceId);
+		RemoveAlertAtIndex(i);
+	}
+
+	const int32 CurrentTurn = GameManager ? GameManager->CurrentTurn : 0;
+	const bool bForceSpawn = (GuaranteedSpawnEveryNTurns > 0) && ((CurrentTurn - LastSpawnTurn) >= GuaranteedSpawnEveryNTurns);
+	const bool bRollSpawn = (FMath::RandRange(1, 100) <= SpawnChancePercent);
+
+	if ((bForceSpawn || bRollSpawn) && TrySpawnRandomAlert())
+	{
+		LastSpawnTurn = CurrentTurn;
+	}
+}
+
+void AAlertManager::SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible, int32 TurnsRemaining)
+{
+	if (!TileManager)
+	{
+		return;
+	}
+
+	if (ATile* const* FoundTile = TileManager->TileLookup.Find(TileCoords))
+	{
+		if (IsValid(*FoundTile))
+		{
+			(*FoundTile)->SetAlertTurnsRemaining(TurnsRemaining);
+			(*FoundTile)->SetAlertIndicatorVisible(bVisible);
+		}
+	}
 }
