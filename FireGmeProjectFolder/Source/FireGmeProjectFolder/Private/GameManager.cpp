@@ -193,13 +193,19 @@ void AGameManager::EndTurn()
 		for (AUnit* Unit : UnitsInPlay)
 		{
 			if (!Unit || !Unit->CurrentTile)
+			{
 				continue;
+			}
 
 			if (Unit->UnitData.ID != 2)
+			{
 				continue;
+			}
 
 			if (Unit->CurrentTile->TileID != 4)
+			{
 				continue;
+			}
 
 			UE_LOG(LogTemp, Log, TEXT("Residential Firefighter has reduced health cost of a tile."));
 			Unit->EvacuateResidents();
@@ -278,7 +284,8 @@ void AGameManager::StartPlayerTurn()
 		}
 	}
 
-	// REFRESH UNITS
+	// Units deployed later in ProcessDeploymentQueue() are not included here,
+	// so each newly deployed unit gets StartTurn() individually after it is spawned.
 	TArray<AActor*> FoundUnits;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundUnits);
 
@@ -289,8 +296,6 @@ void AGameManager::StartPlayerTurn()
 			Unit->StartTurn();
 		}
 	}
-
-	// PROCESS DEPLOYMENT QUEUE
 	ProcessDeploymentQueue();
 
 	UE_LOG(LogTemp, Log, TEXT("Player turn %d started. Gained %d AP (Base: %d, Interest: %d, Last Stand: %d, AP/Turn Mod: %+d). Total AP: %d"),
@@ -370,10 +375,6 @@ void AGameManager::UnregisterUnit(AUnit* UnitToDeregister)
 	}
 }
 
-// ===========================
-//       DEPLOYMENT QUEUE
-// ===========================
-
 bool AGameManager::PurchaseAndQueueUnit(FName UnitRowName, FIntVector SpawnCoords)
 {
 	UE_LOG(LogTemp, Warning, TEXT("C++ PurchaseAndQueueUnit HIT: %s"), *UnitRowName.ToString());
@@ -424,7 +425,7 @@ void AGameManager::ClearDeploymentQueue()
 
 void AGameManager::ProcessDeploymentQueue()
 {
-	// iterate backwards so RemoveAt is safe
+	// Iterate backwards so RemoveAt is safe.
 	for (int32 i = PendingDeployments.Num() - 1; i >= 0; --i)
 	{
 		FPendingUnitDeployment& Entry = PendingDeployments[i];
@@ -432,21 +433,27 @@ void AGameManager::ProcessDeploymentQueue()
 
 		if (Entry.TurnsRemaining <= 0)
 		{
-			AUnit* NewUnit = DeployUnitNow(Entry);
+			// Copy the deployment before RemoveAt(). RemoveAt() invalidates Entry.
+			const FPendingUnitDeployment CompletedDeployment = Entry;
 
-			// Remove entry regardless
+			AUnit* NewUnit = DeployUnitNow(CompletedDeployment);
+
+			// Remove entry regardless of spawn success, preserving your original behavior.
 			PendingDeployments.RemoveAt(i);
-
 			OnDeploymentQueueChanged.Broadcast();
 
 			if (NewUnit)
 			{
-				OnUnitDeployed_BP(NewUnit, Entry.UnitRowName, Entry.SpawnCoords);
+				// The normal StartPlayerTurn() unit refresh already happened before ProcessDeploymentQueue().
+				// This calls StartTurn() only for the newly deployed unit so it gets same-turn movement/highlight state.
+				NewUnit->StartTurn();
+
+				OnUnitDeployed_BP(NewUnit, CompletedDeployment.UnitRowName, CompletedDeployment.SpawnCoords);
 			}
 		}
 	}
 
-	// If nothing deployed, we still changed TurnsRemaining, so UI will want refresh:
+	// If nothing deployed, we still changed TurnsRemaining, so UI will want refresh.
 	if (PendingDeployments.Num() > 0)
 	{
 		OnDeploymentQueueChanged.Broadcast();
@@ -457,6 +464,7 @@ AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
 {
 	if (!UnitDataTable)
 	{
+		UE_LOG(LogTemp, Error, TEXT("DeployUnitNow: UnitDataTable is null on GameManager."));
 		return nullptr;
 	}
 
@@ -468,13 +476,16 @@ AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
 		return nullptr;
 	}
 
-	FVector TempLocation(0.f, 0.f, 0.f); // THIS is changing unit Z level
+	FVector TempLocation(0.f, 0.f, 0.f);
 	const FVector AirLocation(0.f, 0.f, 200.f);
 	const FVector GroundLocation(0.f, 0.f, 35.f);
-	if (Deployment.UnitRowName == "HELICOPTER") { // Not probably the best way to do this, but should work
+
+	if (Deployment.UnitRowName == "HELICOPTER")
+	{
 		TempLocation = AirLocation;
 	}
-	else {
+	else
+	{
 		TempLocation = GroundLocation;
 	}
 
@@ -483,29 +494,58 @@ AUnit* AGameManager::DeployUnitNow(const FPendingUnitDeployment& Deployment)
 	AUnit* NewUnit = GetWorld()->SpawnActor<AUnit>(Row->Unit_BP, SpawnTM);
 	if (!NewUnit)
 	{
+		UE_LOG(LogTemp, Error, TEXT("DeployUnitNow: SpawnActor failed for '%s'."), *Deployment.UnitRowName.ToString());
 		return nullptr;
 	}
 
-	// Apply the DT row
-	NewUnit->ApplyDataFromRowName(Deployment.UnitRowName);
+	// The Unit's ApplyDataFromRowName() expects UnitDataTable to be set on the unit.
+	// Without this, ApplyDataFromRowName() logs "UnitDataTable is not set" and returns early.
+	NewUnit->UnitDataTable = UnitDataTable;
 
-	// Snap to requested hex tile
-	if (TileManager)
+	// Apply the DT row to initialize stats, mesh, material, etc.
+	// If ApplyDataFromRowName() also snaps to UnitData.Coordinates, consider removing that snap
+	// from Unit.cpp so Deployment.SpawnCoords remains the single source of truth for placement.
+	if (!NewUnit->ApplyDataFromRowName(Deployment.UnitRowName))
 	{
-		if (ATile* const* FoundTile = TileManager->TileLookup.Find(Deployment.SpawnCoords))
+		UE_LOG(LogTemp, Warning, TEXT("DeployUnitNow: ApplyDataFromRowName failed for '%s' on %s."),
+			*Deployment.UnitRowName.ToString(),
+			*GetNameSafe(NewUnit));
+	}
+
+	// Snap to requested deployment hex tile.
+	ATileManager* TM = GetTileManager();
+	if (TM)
+	{
+		if (ATile* const* FoundTile = TM->TileLookup.Find(Deployment.SpawnCoords))
 		{
 			NewUnit->SetCurrentTile(*FoundTile);
+
+			UE_LOG(LogTemp, Warning, TEXT("DeployUnitNow: %s CurrentTile set to %s at (%d,%d,%d)."),
+				*GetNameSafe(NewUnit),
+				*GetNameSafe(*FoundTile),
+				Deployment.SpawnCoords.X,
+				Deployment.SpawnCoords.Y,
+				Deployment.SpawnCoords.Z);
 		}
 		else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("DeployUnitNow: No tile at (%d,%d,%d). Leaving unit at temp location."),
-				Deployment.SpawnCoords.X, Deployment.SpawnCoords.Y, Deployment.SpawnCoords.Z);
+				Deployment.SpawnCoords.X,
+				Deployment.SpawnCoords.Y,
+				Deployment.SpawnCoords.Z);
 		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("DeployUnitNow: TileManager is null. Could not place spawned unit '%s'."),
+			*Deployment.UnitRowName.ToString());
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Deployed unit '%s' at (%d,%d,%d)"),
 		*Deployment.UnitRowName.ToString(),
-		Deployment.SpawnCoords.X, Deployment.SpawnCoords.Y, Deployment.SpawnCoords.Z);
+		Deployment.SpawnCoords.X,
+		Deployment.SpawnCoords.Y,
+		Deployment.SpawnCoords.Z);
 
 	return NewUnit;
 }
