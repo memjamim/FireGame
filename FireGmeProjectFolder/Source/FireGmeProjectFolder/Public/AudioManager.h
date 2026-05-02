@@ -32,7 +32,9 @@ enum class TileTypes : uint8
 	GRASSY_MOUNTAIN = 6,
 	COMMUNICATIONS_TOWER = 7,
 	WATER_TOWER = 8,
-	FIRE_STATION = 9
+	FIRE_STATION = 9,
+	CHARRED_MOUNTAIN = 10,
+	SCHOOL = 11
 };
 
 UCLASS()
@@ -187,6 +189,22 @@ public:
 	// The .wav file for the Fire Station Tile.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	class USoundBase* FireStationSettlingSound;
+
+	// Component for audio that will play the music chosen (for the Charred Mountain Tile).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* CharredMountainSettlingSoundComponent;
+
+	// The .wav file for the Charred Mountain Tile.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* CharredMountainSettlingSound;
+
+	// Component for audio that will play the music chosen (for the School Tile).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* SchoolSettlingSoundComponent;
+
+	// The .wav file for the School Tile.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* SchoolSettlingSound;
 
 	// Component for audio that will play the music chosen (for the fire spreading sounds).
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")

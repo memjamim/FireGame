@@ -82,6 +82,14 @@ AAudioManager::AAudioManager()
 	FireStationSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
 	FireStationSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
 
+	CharredMountainSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("CharredMountainSettlingSoundComponent"));
+	CharredMountainSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	CharredMountainSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
+	SchoolSettlingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("SchoolSettlingSoundComponent"));
+	SchoolSettlingSoundComponent->SetupAttachment(AudioSceneRootComponent);
+	SchoolSettlingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
+
 	FireSpreadingSoundComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FireSpreadingSoundComponent"));
 	FireSpreadingSoundComponent->SetupAttachment(AudioSceneRootComponent);
 	FireSpreadingSoundComponent->bAutoActivate = false; // Don't play any sounds until we desire.
@@ -123,6 +131,8 @@ void AAudioManager::BeginPlay()
 		CommunicationsTowerSettlingSoundComponent->SetSound(CommunicationsTowerSettlingSound);
 		WaterTowerSettlingSoundComponent->SetSound(WaterTowerSettlingSound);
 		FireStationSettlingSoundComponent->SetSound(FireStationSettlingSound);
+		CharredMountainSettlingSoundComponent->SetSound(CharredMountainSettlingSound);
+		SchoolSettlingSoundComponent->SetSound(SchoolSettlingSound);
 
 		FireSpreadingSoundComponent->SetSound(FireSpreadingSound);
 		WindDirectionChangeSoundComponent->SetSound(WindDirectionChangeSound);
@@ -241,6 +251,18 @@ void AAudioManager::PlayUnitSettlingSound(AUnit* SettlingUnit)
 			if (FireStationSettlingSound)
 			{
 				UGameplayStatics::PlaySound2D(this, FireStationSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+			}
+		}
+		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::CHARRED_MOUNTAIN)) {
+			if (CharredMountainSettlingSound)
+			{
+				UGameplayStatics::PlaySound2D(this, CharredMountainSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
+			}
+		}
+		else if (SettlingUnit->CurrentTile->TileID == static_cast<int32>(TileTypes::SCHOOL)) {
+			if (SchoolSettlingSound)
+			{
+				UGameplayStatics::PlaySound2D(this, SchoolSettlingSound); // Non-spatial sounds. Use for buttons and UI clicks.
 			}
 		}
 	}

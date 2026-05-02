@@ -9,6 +9,23 @@
 #include "Engine/Texture2D.h"       
 #include "Tile.generated.h"
 
+// Types of Tiles
+UENUM(BlueprintType)
+enum class TileIDs : uint8
+{
+	FOREST_ID = 0,
+	GRASS_ID = 1,
+	WATER_ID = 2,
+	CHARRED_ID = 3,
+	RESIDENTIAL_ID = 4,
+	ROCKY_MOUNTAIN_ID = 5,
+	GRASSY_MOUNTAIN_ID = 6,
+	COMMUNICATIONS_TOWER_ID = 7,
+	WATER_TOWER_ID = 8,
+	FIRE_STATION_ID = 9,
+	SCHOOL_ID = 11,
+};
+
 class UNiagaraSystem;
 class ATileManager;
 class UTextRenderComponent;
