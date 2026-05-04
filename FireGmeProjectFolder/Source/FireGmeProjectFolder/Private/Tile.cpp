@@ -187,9 +187,18 @@ void ATile::SetAlertTurnsRemaining(int32 InTurnsRemaining)
 
 void ATile::ReduceCommunityHealthCost()
 {
-	if (CommunityHealthCost > 2) {
-		CommunityHealthCost--;
-		UE_LOG(LogTemp, Log, TEXT("New Community Health Cost: %d"), CommunityHealthCost);
+	UE_LOG(LogTemp, Log, TEXT("EVACUATE CURRENT TILE ID: %d"), TileID);
+	if (this->TileID == static_cast<int32>(TileIDs::SCHOOL_ID)) {
+		if (this->CommunityHealthCost > 5) {
+			(this->CommunityHealthCost)--;
+			UE_LOG(LogTemp, Log, TEXT("New Community Health Cost: %d"), CommunityHealthCost);
+		}
+	}
+	else if (this->TileID == static_cast<int32>(TileIDs::RESIDENTIAL_ID)) {
+		if (this->CommunityHealthCost > 2) {
+			(this->CommunityHealthCost)--;
+			UE_LOG(LogTemp, Log, TEXT("New Community Health Cost: %d"), CommunityHealthCost);
+		}
 	}
 }
 

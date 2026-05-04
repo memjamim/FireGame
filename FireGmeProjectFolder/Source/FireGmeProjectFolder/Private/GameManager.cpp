@@ -199,12 +199,7 @@ void AGameManager::EndTurn()
 				continue;
 			}
 
-			if (Unit->UnitData.ID != 2)
-			{
-				continue;
-			}
-
-			if (Unit->CurrentTile->TileID != 4)
+			if (Unit->UnitData.ID != 2) // If it is not a Residential Firefighter.
 			{
 				continue;
 			}
