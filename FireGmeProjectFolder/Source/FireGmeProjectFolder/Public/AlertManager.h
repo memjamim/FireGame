@@ -169,6 +169,10 @@ private:
 	bool DoesUnitRequirementPass(const FIntVector& AlertTileCoords, const FAlertUnitRequirement& Requirement) const;
 	bool EvaluateOptionRequirements(const FActiveAlertInstance& Instance, const FAlertOptionData& OptionData, FText& OutFailureReason) const;
 
+	// Spawn condition helpers
+	FName GetEffectiveAlertId(const FName& RowName, const FAlertData& AlertData) const;
+	bool DoesAlertMeetSpawnConditions(const FName& RowName, const FAlertData& AlertData) const;
+
 	bool ApplyOptionEffect(const FActiveAlertInstance& Instance, const FAlertOptionData& OptionData);
 	bool ApplyTemporaryActionPointIncomeEffect(const FAlertOptionData& OptionData);
 	bool TryApplyActionPointCost(int32 ActionPointCost);
@@ -179,4 +183,13 @@ private:
 	void RegisterAlertTileLink(int32 AlertInstanceId, const FIntVector& TileCoords);
 	void UnregisterAlertTileLink(int32 AlertInstanceId);
 	void HandleAlertClickFromCursor();
-	void SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible, int32 TurnsRemaining = 0);};
+	void SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible, int32 TurnsRemaining = 0);
+
+	// Runtime history
+	UPROPERTY()
+	TSet<FName> SpawnedAlertIds;
+
+	UPROPERTY()
+	TSet<FName> ResolvedAlertIds;
+
+};

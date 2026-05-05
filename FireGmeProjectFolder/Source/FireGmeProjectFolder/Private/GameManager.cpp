@@ -330,14 +330,18 @@ void AGameManager::DoFireTurn()
 // Does random events
 void AGameManager::DoRandomEvent()
 {
-	// Occasional shift in winds
-	if (rand() % 2 == 0)
+	const int32 WindDen = FMath::Max(1, WindShiftChanceDenominator);
+	const int32 WindNum = FMath::Clamp(WindShiftChanceNumerator, 0, WindDen);
+
+	// Wind shift chance
+	if (FMath::RandRange(1, WindDen) <= WindNum)
 	{
-		const int32 Temp = WindDirection;
-		while (WindDirection == Temp)
+		const int32 PreviousWindDirection = WindDirection;
+		while (WindDirection == PreviousWindDirection)
 		{
-			WindDirection = rand() % 6;
+			WindDirection = FMath::RandRange(0, 5);
 		}
+
 		if (AudioManager)
 		{
 			AudioManager->PlayWindDirectionChangeSound();

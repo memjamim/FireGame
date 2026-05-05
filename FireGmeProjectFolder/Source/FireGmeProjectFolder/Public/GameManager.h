@@ -133,6 +133,12 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Turns")
 	int32 ActionPointsPerTurnModifierTurnsRemaining = 0;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Random Events", meta = (ClampMin = "0"))
+	int32 WindShiftChanceNumerator = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Random Events", meta = (ClampMin = "1"))
+	int32 WindShiftChanceDenominator = 4;
+
 	UFUNCTION(BlueprintCallable, Category = "Wind")
 	void SetWindDirection(int32 NewWindDirection);
 
