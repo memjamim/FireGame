@@ -180,6 +180,10 @@ public:
 	virtual void ExecuteAbility_Implementation(const TArray<ATile*>& TargetTiles);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
+	void ExecuteTargetedAbility(const TArray<ATile*>& TargetTiles);
+	virtual void ExecuteTargetedAbility_Implementation(const TArray<ATile*>& TargetTiles);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
 	void ExecuteSpecial(const TArray<ATile*>& TargetTiles, int32 ActionCost);
 	virtual void ExecuteSpecial_Implementation(const TArray<ATile*>& TargetTiles, int32 ActionCost);
 
