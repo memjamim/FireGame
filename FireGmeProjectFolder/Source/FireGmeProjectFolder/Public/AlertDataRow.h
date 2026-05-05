@@ -26,10 +26,17 @@ struct FIREGMEPROJECTFOLDER_API FAlertUnitRequirement
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirement")
-	int32 RequiredUnitID = 0;
+	TArray<int32> RequiredUnitIDs;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirement", meta = (ClampMin = "1"))
+	int32 RequiredUnitsNeeded = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirement", meta = (ClampMin = "0"))
 	int32 RequiredRadius = 0;
+
+	// Legacy single-unit field kept for existing rows.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Requirement", meta = (DeprecatedProperty, DeprecationMessage = "Use RequiredUnitIDs instead."))
+	int32 RequiredUnitID = 0;
 };
 
 USTRUCT(BlueprintType)
@@ -119,6 +126,27 @@ struct FIREGMEPROJECTFOLDER_API FAlertData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
 	int32 Weight = 1;
+
+	// If false, this alert can only happen once per run.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Spawn Conditions")
+	bool bRepeatable = true;
+
+	// All listed Alert IDs must have been resolved before this alert can spawn.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Spawn Conditions")
+	TArray<FName> RequiredResolvedAlertIDs;
+
+	// Spawn turn window (inclusive). Defaults impose no turn restriction.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Spawn Conditions")
+	int32 MinimumTurnToSpawn = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Spawn Conditions")
+	int32 MaximumTurnToSpawn = MAX_int32;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Spawn Conditions")
+	int32 MinimumCommunityHealthToSpawn = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert|Spawn Conditions")
+	int32 MaximumCommunityHealthToSpawn = MAX_int32;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Alert")
 	TArray<FAlertOptionData> Options;
