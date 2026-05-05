@@ -125,7 +125,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Tile|Grid")
 	bool bAutoSyncGridCoordinates = true;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tile|Data")
 	ATileManager* TileManager;
 
 	// NEW: Data-driven visuals info (BP can read these)
