@@ -118,6 +118,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	TArray<ATile*> GetNeighborTiles(const FIntVector& Center) const;
 
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	TArray<ATile*> GetTilesWithinCubeDistance(ATile* CenterTile, int32 Range, bool bIncludeCenter = false) const;
+
 
 protected:
 	// Decrement fire health and handle burnout (NOTE: does NOT plan spread targets anymore)

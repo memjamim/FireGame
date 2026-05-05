@@ -456,6 +456,20 @@ void AUnit::ExecuteAbility_Implementation(const TArray<ATile*>& TargetTiles)
 	bHasUsedAbilityThisTurn = true;
 }
 
+void AUnit::ExecuteTargetedAbility_Implementation(const TArray<ATile*>& TargetTiles)
+{
+	if (!CanUseAbility())
+	{
+		return;
+	}
+
+	// Logic to be implemented in Blueprints
+	// Blueprint has access to this->TileManager and this->CurrentTile
+
+	// Mark ability as used for this turn
+	bHasUsedAbilityThisTurn = true;
+}
+
 bool AUnit::CanUseSpecial(int32 ActionCost) const
 {
 	// Specials are once per turn but cost actions/stamina

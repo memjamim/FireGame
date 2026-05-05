@@ -645,3 +645,42 @@ ATile* ATileManager::FindSafeTileToBurn(int32 MinimumDistance)
 	int32 RandIndex = FMath::RandRange(0, ValidForestTiles.Num() - 1); // Get a random Tile's index and return that Tile to start the fire at.
 	return ValidForestTiles[RandIndex];
 }
+
+TArray<ATile*> ATileManager::GetTilesWithinCubeDistance(ATile* CenterTile, int32 Range, bool bIncludeCenter) const
+{
+	TArray<ATile*> TilesInRange;
+
+	if (!IsValid(CenterTile))
+	{
+		return TilesInRange;
+	}
+
+	const int32 ClampedRange = FMath::Max(0, Range);
+	const FIntVector CenterCoords = CenterTile->GridCoordinates;
+
+	for (ATile* Tile : RegisteredTiles)
+	{
+		if (!IsValid(Tile))
+		{
+			continue;
+		}
+
+		if (!bIncludeCenter && Tile == CenterTile)
+		{
+			continue;
+		}
+
+		const FIntVector Delta = Tile->GridCoordinates - CenterCoords;
+		const int32 CubeDistance = FMath::Max3(
+			FMath::Abs(Delta.X),
+			FMath::Abs(Delta.Y),
+			FMath::Abs(Delta.Z));
+
+		if (CubeDistance <= ClampedRange)
+		{
+			TilesInRange.Add(Tile);
+		}
+	}
+
+	return TilesInRange;
+}

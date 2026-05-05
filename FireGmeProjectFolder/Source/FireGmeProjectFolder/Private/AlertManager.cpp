@@ -297,14 +297,17 @@ bool AAlertManager::ResolveAlertOption(int32 AlertInstanceId, int32 OptionIndex)
 		return false;
 	}
 
-	Instance.bResolved = true;
-
-	OnAlertResolved.Broadcast(Instance.InstanceId);
-	OnAlertResolved_BP(Instance, OptionIndex, OptionData);
-
-	UE_LOG(LogTemp, Log, TEXT("Alert resolved. InstanceId=%d Option=%d"), Instance.InstanceId, OptionIndex);
+	FActiveAlertInstance ResolvedInstance = Instance;
+	ResolvedInstance.bResolved = true;
+	const int32 ResolvedInstanceId = ResolvedInstance.InstanceId;
 
 	RemoveAlertAtIndex(Index);
+
+	OnAlertResolved.Broadcast(ResolvedInstanceId);
+	OnAlertResolved_BP(ResolvedInstance, OptionIndex, OptionData);
+
+	UE_LOG(LogTemp, Log, TEXT("Alert resolved. InstanceId=%d Option=%d"), ResolvedInstanceId, OptionIndex);
+
 	return true;
 }
 
@@ -501,6 +504,10 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 	case EAlertEffectType::RemoveActionPoints:
 		return GameManager->TrySpendActionPoints(FMath::Max(0, OptionData.EffectMagnitude));
 
+	case EAlertEffectType::AddActionPointsPerTurnTemporary:
+	case EAlertEffectType::RemoveActionPointsPerTurnTemporary:
+		return ApplyTemporaryActionPointIncomeEffect(OptionData);
+
 	case EAlertEffectType::AddCityHealth:
 		if (!TileManager)
 		{
@@ -552,6 +559,7 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 		return false;
 	}
 }
+
 bool AAlertManager::ApplyTemporaryActionPointIncomeEffect(const FAlertOptionData& OptionData)
 {
 	if (!GameManager)
