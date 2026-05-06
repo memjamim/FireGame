@@ -14,7 +14,9 @@ enum class UnitTypes : uint8
 	FIRST_ENTRY = 0,
 	HELICOPTER = 1,
 	RESIDENTIAL_FIREFIGHTER = 2,
-	WOODLAND_FIREFIGHTER = 3
+	WOODLAND_FIREFIGHTER = 3,
+	FIRE_PLANE = 4,
+	FIRE_TRUCK = 5
 };
 
 // Types of Tiles
@@ -26,7 +28,13 @@ enum class TileTypes : uint8
 	WATER = 2,
 	CHARRED = 3,
 	RESIDENTIAL = 4,
-	MOUNTAIN = 5
+	ROCKY_MOUNTAIN = 5,
+	GRASSY_MOUNTAIN = 6,
+	COMMUNICATIONS_TOWER = 7,
+	WATER_TOWER = 8,
+	FIRE_STATION = 9,
+	CHARRED_MOUNTAIN = 10,
+	SCHOOL = 11
 };
 
 UCLASS()
@@ -86,6 +94,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	class USoundBase* WoodlandFFTranslatingSound;
 
+	// Component for audio that will play the music chosen (for the Plane movement sounds).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* PlaneTranslatingSoundComponent;
+
+	// The .wav file for the Plane translating sound effect.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* PlaneTranslatingSound;
+
+	// Component for audio that will play the music chosen (for the Firetruck movement sounds).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* FiretruckTranslatingSoundComponent;
+
+	// The .wav file for the Firetruck translating sound effect.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* FiretruckTranslatingSound;
+
 	// Component for audio that will play the music chosen (for the Unit settling on Grass Tile sounds).
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
 	class UAudioComponent* GrassSettlingSoundComponent;
@@ -126,13 +150,61 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	class USoundBase* WaterSettlingSound;
 
-	// Component for audio that will play the music chosen (for the Unit settling on Mountain Tile sounds).
+	// Component for audio that will play the music chosen (for the Unit settling on Rocky Mountain Tile sounds).
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
-	class UAudioComponent* MountainSettlingSoundComponent;
+	class UAudioComponent* RockyMountainSettlingSoundComponent;
 
-	// The .wav file for a Unit moving onto a Mountain Tile sound effect.
+	// The .wav file for a Unit moving onto a Rocky Mountain Tile sound effect.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
-	class USoundBase* MountainSettlingSound;
+	class USoundBase* RockyMountainSettlingSound;
+
+	// Component for audio that will play the music chosen (for the Unit settling on Grassy Mountain Tile sounds).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* GrassyMountainSettlingSoundComponent;
+
+	// The .wav file for a Unit moving onto a Grassy Mountain Tile sound effect.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* GrassyMountainSettlingSound;
+
+	// Component for audio that will play the music chosen (for the Communications Tower Tile).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* CommunicationsTowerSettlingSoundComponent;
+
+	// The .wav file for the Communications Tower Tile.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* CommunicationsTowerSettlingSound;
+
+	// Component for audio that will play the music chosen (for the Water Tower Tile).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* WaterTowerSettlingSoundComponent;
+
+	// The .wav file for the Water Tower Tile.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* WaterTowerSettlingSound;
+
+	// Component for audio that will play the music chosen (for the Fire Station Tile).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* FireStationSettlingSoundComponent;
+
+	// The .wav file for the Fire Station Tile.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* FireStationSettlingSound;
+
+	// Component for audio that will play the music chosen (for the Charred Mountain Tile).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* CharredMountainSettlingSoundComponent;
+
+	// The .wav file for the Charred Mountain Tile.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* CharredMountainSettlingSound;
+
+	// Component for audio that will play the music chosen (for the School Tile).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	class UAudioComponent* SchoolSettlingSoundComponent;
+
+	// The .wav file for the School Tile.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	class USoundBase* SchoolSettlingSound;
 
 	// Component for audio that will play the music chosen (for the fire spreading sounds).
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")

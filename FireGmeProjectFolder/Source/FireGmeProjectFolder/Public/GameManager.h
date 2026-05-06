@@ -133,6 +133,12 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Turns")
 	int32 ActionPointsPerTurnModifierTurnsRemaining = 0;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Random Events", meta = (ClampMin = "0"))
+	int32 WindShiftChanceNumerator = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Random Events", meta = (ClampMin = "1"))
+	int32 WindShiftChanceDenominator = 4;
+
 	UFUNCTION(BlueprintCallable, Category = "Wind")
 	void SetWindDirection(int32 NewWindDirection);
 
@@ -164,6 +170,14 @@ public:
 	// Blueprint-readable so UI can show arrives in X turns
 	UPROPERTY(BlueprintReadOnly, Category = "Deployments")
 	TArray<FPendingUnitDeployment> PendingDeployments;
+
+	// A check to see if the Communications Tower is destroyed. If it is, add one turn to every Units' deployment time.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Deployments")
+	bool CommunicationsTowerDestroyed;
+
+	// A check to see if the Water Tower is destroyed. If it is, extinguish all Tiles adjacent to it.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Turns")
+	bool WaterTowerDestroyed;
 
 	/**
 	 * UI calls this instead of spawning immediately.

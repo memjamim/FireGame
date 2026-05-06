@@ -34,6 +34,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
 	TArray<ATile*> ForestTiles;
 
+	// All Grass Tiles currently on the board
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Tiles")
+	TArray<ATile*> GrassTiles;
+
 	UPROPERTY(EditAnywhere, Category = "Tiles")
 	TSubclassOf<ATile> TileClass;
 
@@ -53,7 +57,22 @@ public:
 	int32 GrassTileID = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
-	int32 MountainTileID = 2;
+	int32 NonBurnableMountainTileID = 5;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 BurnableMountainTileID = 6;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 CommunicationsTowerTileID = 7;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 WaterTowerTileID = 8;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 FireStationTileID = 9;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fire")
+	int32 CharredMountainTileID = 10;
 
 	// Reference to GameManager (for WindDirection). If not set, TileManager will auto-find one at BeginPlay.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game")
@@ -98,6 +117,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	TArray<ATile*> GetNeighborTiles(const FIntVector& Center) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	TArray<ATile*> GetTilesWithinCubeDistance(ATile* CenterTile, int32 Range, bool bIncludeCenter = false) const;
 
 
 protected:

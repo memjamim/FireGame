@@ -77,6 +77,10 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Unit|Position")
 	ATile* GetCurrentTile() const { return CurrentTile; }
 
+	/** Returns the tile currently under this unit based on world location. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Unit|Position")
+	ATile* GetTileUnderUnit(float SnapRadius = 200.0f) const;
+
 	/** Get the six neighbors of the unit's current tile via TileManager. */
 	UFUNCTION(BlueprintCallable, Category = "Unit|Position")
 	TArray<ATile*> GetAdjacentTiles() const;
@@ -158,6 +162,9 @@ public:
 	//TArray<FString> GetAvailableAbilities();
 
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Unit|References")
+	ATile* SpawnedTile;
+
 	UFUNCTION(BlueprintCallable, Category = "Unit|Abilities")
 	virtual bool CanUseAbility() const;
 
@@ -171,6 +178,10 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
 	void ExecuteAbility(const TArray<ATile*>& TargetTiles);
 	virtual void ExecuteAbility_Implementation(const TArray<ATile*>& TargetTiles);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
+	void ExecuteTargetedAbility(const TArray<ATile*>& TargetTiles);
+	virtual void ExecuteTargetedAbility_Implementation(const TArray<ATile*>& TargetTiles);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Unit|Abilities")
 	void ExecuteSpecial(const TArray<ATile*>& TargetTiles, int32 ActionCost);

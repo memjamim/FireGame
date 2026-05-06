@@ -110,6 +110,11 @@ bool AAlertManager::TrySpawnRandomAlert()
 			continue;
 		}
 
+		if (!DoesAlertMeetSpawnConditions(RowName, *Data))
+		{
+			continue;
+		}
+
 		const int32 EffectiveWeight = FMath::Max(Data->Weight, 0);
 		if (EffectiveWeight == 0)
 		{
@@ -180,6 +185,9 @@ bool AAlertManager::TrySpawnRandomAlert()
 		return false;
 	}
 
+	const FName EffectiveAlertId = GetEffectiveAlertId(ChosenCandidate->RowName, *ChosenCandidate->Data);
+	SpawnedAlertIds.Add(EffectiveAlertId);
+
 	FActiveAlertInstance NewInstance;
 	NewInstance.InstanceId = NextAlertInstanceId++;
 	NewInstance.AlertRowName = ChosenCandidate->RowName;
@@ -194,7 +202,10 @@ bool AAlertManager::TrySpawnRandomAlert()
 	OnAlertSpawned.Broadcast(NewInstance.InstanceId);
 	OnAlertSpawned_BP(NewInstance, *ChosenCandidate->Data);
 
-	AudioManager->PlayAlertNotificationSound();
+	if (AudioManager)
+	{
+		AudioManager->PlayAlertNotificationSound();
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("Alert spawned. InstanceId=%d Row=%s Tile=(%d,%d,%d) TurnsRemaining=%d"),
 		NewInstance.InstanceId,
@@ -297,14 +308,19 @@ bool AAlertManager::ResolveAlertOption(int32 AlertInstanceId, int32 OptionIndex)
 		return false;
 	}
 
-	Instance.bResolved = true;
+	ResolvedAlertIds.Add(GetEffectiveAlertId(Instance.AlertRowName, *Data));
 
-	OnAlertResolved.Broadcast(Instance.InstanceId);
-	OnAlertResolved_BP(Instance, OptionIndex, OptionData);
-
-	UE_LOG(LogTemp, Log, TEXT("Alert resolved. InstanceId=%d Option=%d"), Instance.InstanceId, OptionIndex);
+	FActiveAlertInstance ResolvedInstance = Instance;
+	ResolvedInstance.bResolved = true;
+	const int32 ResolvedInstanceId = ResolvedInstance.InstanceId;
 
 	RemoveAlertAtIndex(Index);
+
+	OnAlertResolved.Broadcast(ResolvedInstanceId);
+	OnAlertResolved_BP(ResolvedInstance, OptionIndex, OptionData);
+
+	UE_LOG(LogTemp, Log, TEXT("Alert resolved. InstanceId=%d Option=%d"), ResolvedInstanceId, OptionIndex);
+
 	return true;
 }
 
@@ -352,49 +368,6 @@ bool AAlertManager::CanResolveAlertOption(int32 AlertInstanceId, int32 OptionInd
 	return true;
 }
 
-void AAlertManager::ProcessTurnStart()
-{
-	if (!CacheManagerReferences() || !AlertDataTable)
-	{
-		return;
-	}
-
-	static const FString Context(TEXT("ProcessTurnStart"));
-
-	for (int32 i = ActiveAlerts.Num() - 1; i >= 0; --i)
-	{
-		FActiveAlertInstance& Instance = ActiveAlerts[i];
-		if (Instance.bResolved)
-		{
-			continue;
-		}
-
-		Instance.TurnsRemaining -= 1;
-		if (Instance.TurnsRemaining > 0)
-		{
-			continue;
-		}
-
-		const int32 ExpiredInstanceId = Instance.InstanceId;
-
-		if (const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context))
-		{
-			OnAlertExpired_BP(Instance, *Data);
-		}
-
-		OnAlertExpired.Broadcast(ExpiredInstanceId);
-		RemoveAlertAtIndex(i);
-	}
-
-	const int32 CurrentTurn = GameManager ? GameManager->CurrentTurn : 0;
-	const bool bForceSpawn = (GuaranteedSpawnEveryNTurns > 0) && ((CurrentTurn - LastSpawnTurn) >= GuaranteedSpawnEveryNTurns);
-	const bool bRollSpawn = (FMath::RandRange(1, 100) <= SpawnChancePercent);
-
-	if ((bForceSpawn || bRollSpawn) && TrySpawnRandomAlert())
-	{
-		LastSpawnTurn = CurrentTurn;
-	}
-}
 
 bool AAlertManager::GetAlertDisplayData(int32 AlertInstanceId, FActiveAlertInstance& OutInstance, FAlertData& OutData) const
 {
@@ -494,10 +467,21 @@ bool AAlertManager::IsTileAllowedForAlert(const ATile* Tile, const FAlertData& A
 
 bool AAlertManager::DoesUnitRequirementPass(const FIntVector& AlertTileCoords, const FAlertUnitRequirement& Requirement) const
 {
-	if (Requirement.RequiredUnitID <= 0)
+	TArray<int32> EffectiveRequiredUnitIDs = Requirement.RequiredUnitIDs;
+
+	// For old rows still using single ID.
+	if (EffectiveRequiredUnitIDs.Num() == 0 && Requirement.RequiredUnitID > 0)
+	{
+		EffectiveRequiredUnitIDs.Add(Requirement.RequiredUnitID);
+	}
+
+	if (EffectiveRequiredUnitIDs.Num() == 0)
 	{
 		return true;
 	}
+
+	const int32 RequiredUnitsNeeded = FMath::Max(1, Requirement.RequiredUnitsNeeded);
+	int32 MatchingUnitsInRange = 0;
 
 	TArray<AActor*> FoundUnits;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundUnits);
@@ -510,7 +494,7 @@ bool AAlertManager::DoesUnitRequirementPass(const FIntVector& AlertTileCoords, c
 			continue;
 		}
 
-		if (Unit->UnitData.ID != Requirement.RequiredUnitID)
+		if (!EffectiveRequiredUnitIDs.Contains(Unit->UnitData.ID))
 		{
 			continue;
 		}
@@ -518,7 +502,12 @@ bool AAlertManager::DoesUnitRequirementPass(const FIntVector& AlertTileCoords, c
 		const int32 Distance = AUnit::GetCubeDistance(Unit->GridCoordinates, AlertTileCoords);
 		if (Distance <= Requirement.RequiredRadius)
 		{
-			return true;
+			MatchingUnitsInRange++;
+
+			if (MatchingUnitsInRange >= RequiredUnitsNeeded)
+			{
+				return true;
+			}
 		}
 	}
 
@@ -543,6 +532,10 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 
 	case EAlertEffectType::RemoveActionPoints:
 		return GameManager->TrySpendActionPoints(FMath::Max(0, OptionData.EffectMagnitude));
+
+	case EAlertEffectType::AddActionPointsPerTurnTemporary:
+	case EAlertEffectType::RemoveActionPointsPerTurnTemporary:
+		return ApplyTemporaryActionPointIncomeEffect(OptionData);
 
 	case EAlertEffectType::AddCityHealth:
 		if (!TileManager)
@@ -595,6 +588,7 @@ bool AAlertManager::ApplyOptionEffect(const FActiveAlertInstance& Instance, cons
 		return false;
 	}
 }
+
 bool AAlertManager::ApplyTemporaryActionPointIncomeEffect(const FAlertOptionData& OptionData)
 {
 	if (!GameManager)
@@ -664,13 +658,6 @@ void AAlertManager::RemoveAlertAtIndex(int32 Index)
 	ActiveAlerts.RemoveAt(Index);
 }
 
-void AAlertManager::RegisterAlertTileLink(int32 AlertInstanceId, const FIntVector& TileCoords)
-{
-	AlertIdToTileCoords.Add(AlertInstanceId, TileCoords);
-	TileCoordsToAlertId.Add(TileCoords, AlertInstanceId);
-	SetTileAlertIndicator(TileCoords, true);
-}
-
 void AAlertManager::UnregisterAlertTileLink(int32 AlertInstanceId)
 {
 	const FIntVector* FoundCoords = AlertIdToTileCoords.Find(AlertInstanceId);
@@ -682,22 +669,6 @@ void AAlertManager::UnregisterAlertTileLink(int32 AlertInstanceId)
 	SetTileAlertIndicator(*FoundCoords, false);
 	TileCoordsToAlertId.Remove(*FoundCoords);
 	AlertIdToTileCoords.Remove(AlertInstanceId);
-}
-
-void AAlertManager::SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible)
-{
-	if (!TileManager)
-	{
-		return;
-	}
-
-	if (ATile* const* FoundTile = TileManager->TileLookup.Find(TileCoords))
-	{
-		if (IsValid(*FoundTile))
-		{
-			(*FoundTile)->SetAlertIndicatorVisible(bVisible);
-		}
-	}
 }
 
 void AAlertManager::HandleAlertClickFromCursor()
@@ -754,6 +725,11 @@ void AAlertManager::HandleAlertClickFromCursor()
 	OnAlertSelected_BP(*AlertInstanceId);
 }
 
+FName AAlertManager::GetEffectiveAlertId(const FName& RowName, const FAlertData& AlertData) const
+{
+	return AlertData.AlertId.IsNone() ? RowName : AlertData.AlertId;
+}
+
 bool AAlertManager::GetActiveAlertById(int32 AlertInstanceId, FActiveAlertInstance& OutAlertInstance) const
 {
 	const int32 Index = FindActiveAlertIndexById(AlertInstanceId);
@@ -763,5 +739,123 @@ bool AAlertManager::GetActiveAlertById(int32 AlertInstanceId, FActiveAlertInstan
 	}
 
 	OutAlertInstance = ActiveAlerts[Index];
+	return true;
+}
+
+void AAlertManager::RegisterAlertTileLink(int32 AlertInstanceId, const FIntVector& TileCoords)
+{
+	AlertIdToTileCoords.Add(AlertInstanceId, TileCoords);
+	TileCoordsToAlertId.Add(TileCoords, AlertInstanceId);
+
+	int32 TurnsRemaining = 0;
+	const int32 AlertIndex = FindActiveAlertIndexById(AlertInstanceId);
+	if (AlertIndex != INDEX_NONE)
+	{
+		TurnsRemaining = ActiveAlerts[AlertIndex].TurnsRemaining;
+	}
+
+	SetTileAlertIndicator(TileCoords, true, TurnsRemaining);
+}
+
+void AAlertManager::ProcessTurnStart()
+{
+	if (!CacheManagerReferences() || !AlertDataTable)
+	{
+		return;
+	}
+
+	static const FString Context(TEXT("ProcessTurnStart"));
+
+	for (int32 i = ActiveAlerts.Num() - 1; i >= 0; --i)
+	{
+		FActiveAlertInstance& Instance = ActiveAlerts[i];
+		if (Instance.bResolved)
+		{
+			continue;
+		}
+
+		Instance.TurnsRemaining -= 1;
+		if (Instance.TurnsRemaining > 0)
+		{
+			SetTileAlertIndicator(Instance.TileCoords, true, Instance.TurnsRemaining);
+			continue;
+		}
+
+		const int32 ExpiredInstanceId = Instance.InstanceId;
+
+		if (const FAlertData* Data = AlertDataTable->FindRow<FAlertData>(Instance.AlertRowName, Context))
+		{
+			OnAlertExpired_BP(Instance, *Data);
+		}
+
+		OnAlertExpired.Broadcast(ExpiredInstanceId);
+		RemoveAlertAtIndex(i);
+	}
+
+	const int32 CurrentTurn = GameManager ? GameManager->CurrentTurn : 0;
+	const bool bForceSpawn = (GuaranteedSpawnEveryNTurns > 0) && ((CurrentTurn - LastSpawnTurn) >= GuaranteedSpawnEveryNTurns);
+	const bool bRollSpawn = (FMath::RandRange(1, 100) <= SpawnChancePercent);
+
+	if ((bForceSpawn || bRollSpawn) && TrySpawnRandomAlert())
+	{
+		LastSpawnTurn = CurrentTurn;
+	}
+}
+
+void AAlertManager::SetTileAlertIndicator(const FIntVector& TileCoords, bool bVisible, int32 TurnsRemaining)
+{
+	if (!TileManager)
+	{
+		return;
+	}
+
+	if (ATile* const* FoundTile = TileManager->TileLookup.Find(TileCoords))
+	{
+		if (IsValid(*FoundTile))
+		{
+			(*FoundTile)->SetAlertTurnsRemaining(TurnsRemaining);
+			(*FoundTile)->SetAlertIndicatorVisible(bVisible);
+		}
+	}
+}
+
+bool AAlertManager::DoesAlertMeetSpawnConditions(const FName& RowName, const FAlertData& AlertData) const
+{
+	if (!GameManager || !TileManager)
+	{
+		return false;
+	}
+
+	const int32 CurrentTurn = GameManager->CurrentTurn;
+	if (CurrentTurn < AlertData.MinimumTurnToSpawn || CurrentTurn > AlertData.MaximumTurnToSpawn)
+	{
+		return false;
+	}
+
+	const int32 CommunityHealth = TileManager->CommunityHealth;
+	if (CommunityHealth < AlertData.MinimumCommunityHealthToSpawn || CommunityHealth > AlertData.MaximumCommunityHealthToSpawn)
+	{
+		return false;
+	}
+
+	const FName EffectiveAlertId = GetEffectiveAlertId(RowName, AlertData);
+	if (!AlertData.bRepeatable && SpawnedAlertIds.Contains(EffectiveAlertId))
+	{
+		return false;
+	}
+
+	for (const FName& RequiredResolvedAlertId : AlertData.RequiredResolvedAlertIDs)
+	{
+		if (RequiredResolvedAlertId.IsNone())
+		{
+			continue;
+		}
+
+		if (!ResolvedAlertIds.Contains(RequiredResolvedAlertId))
+		{
+			return false;
+		}
+	}
+
 	return true;
 }

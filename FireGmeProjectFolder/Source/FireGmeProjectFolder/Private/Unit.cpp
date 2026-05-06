@@ -323,7 +323,29 @@ void AUnit::UpdateTranslation(float DeltaTime)
 bool AUnit::CanMoveToTile_Implementation(ATile* TargetTile)
 {
 	// Base check — override in Blueprint for range, terrain, occupied checks
-	return IsValid(TargetTile);
+	if (!IsValid(TargetTile))
+	{
+		return false;
+	}
+
+	// Disallow moving into a tile already occupied by another unit
+	if (IsValid(GameManager))
+	{
+		for (AUnit* Unit : GameManager->UnitsInPlay)
+		{
+			if (!IsValid(Unit) || Unit == this)
+			{
+				continue;
+			}
+
+			if (Unit->CurrentTile == TargetTile)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 void AUnit::OnMoveComplete_Implementation()
@@ -434,6 +456,20 @@ void AUnit::ExecuteAbility_Implementation(const TArray<ATile*>& TargetTiles)
 	bHasUsedAbilityThisTurn = true;
 }
 
+void AUnit::ExecuteTargetedAbility_Implementation(const TArray<ATile*>& TargetTiles)
+{
+	if (!CanUseAbility())
+	{
+		return;
+	}
+
+	// Logic to be implemented in Blueprints
+	// Blueprint has access to this->TileManager and this->CurrentTile
+
+	// Mark ability as used for this turn
+	bHasUsedAbilityThisTurn = true;
+}
+
 bool AUnit::CanUseSpecial(int32 ActionCost) const
 {
 	// Specials are once per turn but cost actions/stamina
@@ -481,6 +517,51 @@ void AUnit::RestoreStamina(int32 Amount)
 bool AUnit::HasEnoughStamina(int32 Required) const
 {
 	return CurrentStamina >= Required;
+}
+
+ATile* AUnit::GetTileUnderUnit(float SnapRadius) const
+{
+	if (!TileManager)
+	{
+		return nullptr;
+	}
+
+	// First try a grid lookup using tile world->grid conversion
+	if (IsValid(CurrentTile))
+	{
+		const FIntVector GridAtUnit = CurrentTile->ConvertWorldToGridCoordinates(GetActorLocation());
+		if (ATile* const* FoundByGrid = TileManager->TileLookup.Find(GridAtUnit))
+		{
+			if (IsValid(*FoundByGrid))
+			{
+				return *FoundByGrid;
+			}
+		}
+	}
+
+	// Fallback: nearest registered tile in XY plane.
+	const FVector UnitLocation = GetActorLocation();
+	const float MaxDistanceSq = (SnapRadius > 0.0f) ? FMath::Square(SnapRadius) : BIG_NUMBER;
+
+	ATile* BestTile = nullptr;
+	float BestDistanceSq = BIG_NUMBER;
+
+	for (ATile* Tile : TileManager->RegisteredTiles)
+	{
+		if (!IsValid(Tile))
+		{
+			continue;
+		}
+
+		const float DistanceSq2D = FVector::DistSquared2D(UnitLocation, Tile->GetActorLocation());
+		if (DistanceSq2D <= MaxDistanceSq && DistanceSq2D < BestDistanceSq)
+		{
+			BestDistanceSq = DistanceSq2D;
+			BestTile = Tile;
+		}
+	}
+
+	return BestTile;
 }
 
 // Helper functions
